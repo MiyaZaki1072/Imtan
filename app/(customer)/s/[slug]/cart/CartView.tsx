@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { CartLine } from '@/components/CartLine';
 import { AlertIcon } from '@/components/icons';
@@ -22,7 +22,7 @@ import { placeOrder, type PlaceOrderError } from '@/lib/orders/actions';
 import { track } from '@/lib/track';
 import { useLiveShop } from '@/lib/use-live-shop';
 
-const ORDER_ERRORS: Record<PlaceOrderError, string> = {
+export const ORDER_ERRORS: Record<PlaceOrderError, string> = {
   empty: 'ตะกร้ายังว่าง',
   bad_input: 'ข้อมูลตะกร้าไม่ถูกต้อง ลองลบแล้วเพิ่มรายการใหม่',
   shop_closed: 'ร้านปิดรับออเดอร์ชั่วคราว',
@@ -33,6 +33,9 @@ const ORDER_ERRORS: Record<PlaceOrderError, string> = {
   signed_out: 'หมดเวลาเข้าใช้งาน กรุณาใส่ชื่ออีกครั้ง',
   shop_not_found: 'ไม่พบร้านนี้',
   failed: 'สั่งไม่สำเร็จ ลองใหม่อีกครั้ง',
+  pickup_invalid: 'เวลารับไม่ถูกต้อง เลือกเวลาใหม่',
+  pickup_too_soon: 'เวลารับใกล้เกินไป เลือกเวลาใหม่',
+  pickup_too_far: 'เลือกเวลารับล่วงหน้าได้ไม่เกิน 3 ชั่วโมง',
 };
 
 export function CartView({ initial }: { initial: LoadedShop }) {
@@ -42,6 +45,8 @@ export function CartView({ initial }: { initial: LoadedShop }) {
   const cartSlug = initial.shop.slug;
   useEffect(() => track('cart_opened', { shop: cartSlug }), [cartSlug]);
   const [orderError, setOrderError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'now' | 'later'>('now');
+  const dropped = useSearchParams().get('dropped');
   const { cart, setQty, setAllergyNote } = useCart(shop.slug);
 
   // The server reloads the menu and prices everything itself; only ids, choices, qty and notes are sent.
@@ -156,6 +161,41 @@ export function CartView({ initial }: { initial: LoadedShop }) {
         </div>
       )}
 
+      {dropped && (
+        <p
+          role="status"
+          className="mt-4 rounded-xl bg-warning-soft px-4 py-3 text-sm font-semibold text-warning"
+        >
+          รายการที่ไม่มีขายแล้วจึงไม่ถูกเพิ่มในตะกร้า: {dropped}
+        </p>
+      )}
+
+      <fieldset className="mt-4">
+        <legend className="mb-1.5 font-semibold">จะรับอาหารเมื่อไร</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              ['now', 'รับเลย', 'ต่อคิวทันทีหลังชำระเงิน'],
+              ['later', 'สั่งล่วงหน้า', 'เลือกเวลามารับ เช่น 12:05'],
+            ] as const
+          ).map(([value, title, hint]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={mode === value}
+              onClick={() => setMode(value)}
+              className={cx(
+                'min-h-16 rounded-xl border-2 px-3 py-2 text-left',
+                mode === value ? 'border-primary bg-primary-soft' : 'border-border bg-surface',
+              )}
+            >
+              <span className="block font-semibold">{title}</span>
+              <span className="block text-xs text-muted">{hint}</span>
+            </button>
+          ))}
+        </div>
+      </fieldset>
+
       <div className="mt-4 space-y-2" aria-live="polite">
         {issues.pairOnlyAlone && (
           <p className="rounded-xl bg-warning-soft px-4 py-3 text-sm font-semibold text-warning">
@@ -188,14 +228,24 @@ export function CartView({ initial }: { initial: LoadedShop }) {
               {orderError}
             </p>
           )}
-          <button
-            type="button"
-            disabled={blocked || placing}
-            onClick={submit}
-            className={cx(btnPrimary, btnLarge)}
-          >
-            {placing ? 'กำลังสั่ง…' : 'ไปชำระเงิน'}
-          </button>
+          {mode === 'later' ? (
+            <Link
+              href={blocked ? '#' : `/s/${shop.slug}/preorder`}
+              aria-disabled={blocked}
+              className={cx(btnPrimary, btnLarge, blocked && 'pointer-events-none opacity-50')}
+            >
+              เลือกเวลารับ
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled={blocked || placing}
+              onClick={submit}
+              className={cx(btnPrimary, btnLarge)}
+            >
+              {placing ? 'กำลังสั่ง…' : 'ไปชำระเงิน'}
+            </button>
+          )}
         </div>
       </div>
     </>

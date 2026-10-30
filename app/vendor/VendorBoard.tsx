@@ -9,6 +9,7 @@ import { VendorOrderCard } from '@/components/VendorOrderCard';
 import { btnPrimary, btnSecondary, cx } from '@/components/ui';
 import { playChime, useArmAudio, useWakeLock } from '@/lib/alert';
 import { waitMinutes } from '@/lib/format';
+import { isScheduled } from '@/lib/orders/preorder';
 import { actSimulateOrder } from '@/lib/admin/actions';
 import { useLiveData } from '@/lib/use-live-data';
 import {
@@ -140,9 +141,22 @@ export function VendorBoard({
     setBusyId(null);
   }
 
-  const orders = board.orders;
+  // Pre-orders that are not released yet wait at the bottom of รอทำ.
+  const scheduledIds = new Set(
+    board.orders
+      .filter((o) => o.status === 'queued' && isScheduled(o.releaseAt, new Date(serverNow)))
+      .map((o) => o.id),
+  );
+  const orders = [...board.orders].sort((a, b) => {
+    const sa = scheduledIds.has(a.id);
+    const sb = scheduledIds.has(b.id);
+    if (sa !== sb) return sa ? 1 : -1;
+    return sa
+      ? Date.parse(a.releaseAt ?? '') - Date.parse(b.releaseAt ?? '')
+      : a.queueNo - b.queueNo;
+  });
   const repeats = new Map<string, { qty: number; labels: string[] }>();
-  for (const o of orders.filter((x) => x.status === 'queued')) {
+  for (const o of orders.filter((x) => x.status === 'queued' && !scheduledIds.has(x.id))) {
     for (const it of o.items) {
       const r = repeats.get(it.kitchenSummary) ?? { qty: 0, labels: [] };
       r.qty += it.qty;
@@ -260,6 +274,7 @@ export function VendorBoard({
                     key={o.id}
                     order={o}
                     busy={busyId === o.id}
+                    scheduled={scheduledIds.has(o.id)}
                     minutesSinceReady={
                       o.readyAt
                         ? Math.max(0, Math.round((serverNow - Date.parse(o.readyAt)) / 60000))

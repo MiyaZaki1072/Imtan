@@ -64,6 +64,8 @@ export async function getOrderView(orderId: string, userId: string): Promise<Ord
     })),
     allergyNote: o.allergy_note,
     paymentExpiresAt: o.payment_expires_at,
+    pickupAt: o.pickup_at,
+    releaseAt: o.release_at,
     paidAt: o.paid_at,
     queuedAt: o.queued_at,
     startedAt: o.started_at,

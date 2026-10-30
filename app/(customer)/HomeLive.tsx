@@ -72,6 +72,12 @@ export function HomeLive({ initial }: { initial: HomeData }) {
           </li>
         ))}
       </ul>
+      <Link
+        href="/history"
+        className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
+      >
+        ประวัติการสั่ง
+      </Link>
     </>
   );
 }

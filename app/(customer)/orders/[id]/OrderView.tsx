@@ -13,7 +13,9 @@ import { ReadyAlert } from '@/components/ReadyAlert';
 import { btnLarge, btnPrimary, card, cx } from '@/components/ui';
 import { useArmAudio, useWakeLock } from '@/lib/alert';
 import { formatBaht, formatClock, waitMinutes } from '@/lib/format';
+import { HistoryList } from '@/components/HistoryList';
 import { markReceived, submitFeedback } from '@/lib/orders/actions';
+import { isScheduled } from '@/lib/orders/preorder';
 import type { OrderViewData, WaitFeedback } from '@/lib/orders/types';
 import { remainingWaitSeconds } from '@/lib/orders/wait';
 import { useLiveData } from '@/lib/use-live-data';
@@ -24,7 +26,7 @@ const FEEDBACK: { value: WaitFeedback; label: string }[] = [
   { value: 'slower', label: 'ช้ากว่าที่บอก' },
 ];
 
-function steps(o: OrderViewData): OrderStep[] {
+function steps(o: OrderViewData, scheduled: boolean): OrderStep[] {
   const idx = ['queued', 'cooking', 'ready', 'picked_up'].indexOf(o.status);
   const cooking = idx >= 1;
   return [
@@ -37,7 +39,9 @@ function steps(o: OrderViewData): OrderStep[] {
       title: 'อยู่ในคิว',
       detail:
         idx === 0
-          ? 'แม่ค้ากำลังทำคิวก่อนหน้าคุณ'
+          ? scheduled && o.releaseAt
+            ? `ร้านจะเริ่มทำประมาณ ${formatClock(o.releaseAt)} น.`
+            : 'แม่ค้ากำลังทำคิวก่อนหน้าคุณ'
           : o.queuedAt
             ? `${formatClock(o.queuedAt)} น.`
             : '',
@@ -102,6 +106,8 @@ export function OrderView({ initial }: { initial: OrderViewData }) {
   const readyBy = new Date(serverNow.getTime() + wait * 1000);
   const label = o.queueLabel ?? '';
   const justPaid = params.get('paid') === '1' && o.status === 'queued';
+  // A paid pre-order the shop has not been told to start yet.
+  const scheduled = o.status === 'queued' && isScheduled(o.releaseAt, serverNow);
 
   function received() {
     startTransition(async () => {
@@ -165,11 +171,18 @@ export function OrderView({ initial }: { initial: OrderViewData }) {
               <li key={it}>{it}</li>
             ))}
           </ul>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <TicketStat label="จานก่อนหน้า" value={o.dishesAhead} />
-            <TicketStat label="รอประมาณ" value={`${waitMinutes(wait)} นาที`} />
-            <TicketStat label="พร้อมราว" value={formatClock(readyBy)} />
-          </div>
+          {scheduled && o.pickupAt && o.releaseAt ? (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <TicketStat label="สั่งล่วงหน้า · รับเวลา" value={formatClock(o.pickupAt)} />
+              <TicketStat label="ร้านเริ่มทำ ~" value={formatClock(o.releaseAt)} />
+            </div>
+          ) : (
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <TicketStat label="จานก่อนหน้า" value={o.dishesAhead} />
+              <TicketStat label="รอประมาณ" value={`${waitMinutes(wait)} นาที`} />
+              <TicketStat label="พร้อมราว" value={formatClock(readyBy)} />
+            </div>
+          )}
           <p className="mt-3 text-center text-sm text-muted">
             ชำระเงินแล้ว · {formatBaht(o.totalSatang ?? 0)}
           </p>
@@ -279,6 +292,15 @@ export function OrderView({ initial }: { initial: OrderViewData }) {
             </p>
           </section>
 
+          <h2 className="mt-6 mb-2 font-bold">ประวัติการสั่ง</h2>
+          <HistoryList limit={3} />
+          <Link
+            href="/history"
+            className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
+          >
+            ดูประวัติทั้งหมด
+          </Link>
+
           <Link href="/" className={cx(btnPrimary, btnLarge, 'mt-6')}>
             กลับหน้าแรก
           </Link>
@@ -332,14 +354,29 @@ export function OrderView({ initial }: { initial: OrderViewData }) {
             </QueueTicket>
           ) : (
             <QueueTicket shopName={o.shopName} label={label}>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <TicketStat label="จานก่อนหน้าคุณ" value={`${o.dishesAhead} จาน`} />
-                <TicketStat label="เวลารอโดยประมาณ" value={`~${waitMinutes(wait)} นาที`} />
-              </div>
-              <p className="mt-3 text-sm text-muted">
-                คาดว่าพร้อมรับประมาณ {formatClock(readyBy)} น. ({o.dishesAhead + o.itemCount} จาน ×
-                เฉลี่ย {waitMinutes(o.secondsPerItem)} นาที)
-              </p>
+              {scheduled && o.pickupAt && o.releaseAt ? (
+                <>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <TicketStat label="สั่งล่วงหน้า · รับเวลา" value={formatClock(o.pickupAt)} />
+                    <TicketStat label="ร้านเริ่มทำประมาณ" value={formatClock(o.releaseAt)} />
+                  </div>
+                  <p className="mt-3 text-sm text-muted">
+                    ชำระเงินแล้ว ร้านจะเริ่มทำเมื่อถึงเวลา มาถึงตอน {formatClock(o.pickupAt)} น.
+                    แล้วรับได้เลย
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <TicketStat label="จานก่อนหน้าคุณ" value={`${o.dishesAhead} จาน`} />
+                    <TicketStat label="เวลารอโดยประมาณ" value={`~${waitMinutes(wait)} นาที`} />
+                  </div>
+                  <p className="mt-3 text-sm text-muted">
+                    คาดว่าพร้อมรับประมาณ {formatClock(readyBy)} น. ({o.dishesAhead + o.itemCount}{' '}
+                    จาน × เฉลี่ย {waitMinutes(o.secondsPerItem)} นาที)
+                  </p>
+                </>
+              )}
             </QueueTicket>
           )}
         </div>
@@ -353,7 +390,7 @@ export function OrderView({ initial }: { initial: OrderViewData }) {
         </section>
 
         <h2 className="mt-6 mb-2 font-bold">สถานะออเดอร์</h2>
-        <OrderSteps steps={steps(o)} />
+        <OrderSteps steps={steps(o, scheduled)} />
 
         <p className="mt-4 rounded-xl bg-primary-soft px-4 py-3 text-sm text-primary-hover">
           {cooking

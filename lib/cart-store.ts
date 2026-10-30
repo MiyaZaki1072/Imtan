@@ -103,3 +103,8 @@ export function useCart(slug: string) {
 
   return { cart, add, setQty, setAllergyNote, clear };
 }
+
+/** Puts these lines in the shop's cart (used by "สั่งอีก"); replaces what was there. */
+export function replaceCart(slug: string, lines: CartLine[]) {
+  write(slug, { lines: lines.map((l) => ({ ...l, key: cartLineKey(l) })), allergyNote: '' });
+}

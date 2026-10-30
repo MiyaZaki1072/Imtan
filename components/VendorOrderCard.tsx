@@ -32,6 +32,7 @@ export function VendorOrderCard({
   order,
   minutesSinceReady,
   busy,
+  scheduled = false,
   onStart,
   onReady,
   onPickedUp,
@@ -42,6 +43,8 @@ export function VendorOrderCard({
   minutesSinceReady: number | null;
   /** An action for this order is running: buttons wait so a double tap can't fire twice. */
   busy?: boolean;
+  /** A paid pre-order the shop has not been told to start yet. */
+  scheduled?: boolean;
   onStart: () => void;
   onReady: () => void;
   onPickedUp: () => void;
@@ -58,6 +61,7 @@ export function VendorOrderCard({
           ? 'border-success/40 bg-success-soft/60'
           : 'border-border bg-surface',
         order.status === 'cooking' && 'border-warning/50',
+        scheduled && 'border-dashed border-info-ink/40 bg-bg',
       )}
     >
       <header className="flex flex-wrap items-baseline justify-between gap-x-2">
@@ -75,6 +79,13 @@ export function VendorOrderCard({
               : `${SOURCE[order.source]} · ${formatClock(order.queuedAt)}`}
         </p>
       </header>
+
+      {scheduled && order.pickupAt && order.releaseAt && (
+        <p className="mt-1.5 rounded-lg bg-info-soft px-2.5 py-1 text-sm font-semibold text-info-ink">
+          สั่งล่วงหน้า · รับ {formatClock(order.pickupAt)} น. · เริ่มทำ ~
+          {formatClock(order.releaseAt)} น.
+        </p>
+      )}
 
       {order.allergyNote && (
         <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-danger px-2.5 py-1 text-sm font-bold text-white">

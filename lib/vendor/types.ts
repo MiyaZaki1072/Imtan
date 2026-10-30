@@ -21,6 +21,9 @@ export interface VendorOrder {
   totalSatang: number | null;
   allergyNote: string | null;
   items: VendorOrderItem[];
+  /** Pre-order: collection time and when to start (releaseAt in the future = not released yet). */
+  pickupAt: string | null;
+  releaseAt: string | null;
   queuedAt: string;
   startedAt: string | null;
   readyAt: string | null;

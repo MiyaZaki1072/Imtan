@@ -21,7 +21,7 @@ export async function getVendorBoard(shopId: string): Promise<VendorBoardData | 
   const { data: rows } = await db
     .from('orders')
     .select(
-      'id, queue_no, queue_label, customer_name, source, status, item_count, total_satang, allergy_note, queued_at, started_at, ready_at, last_called_at, order_items(menu_name, kitchen_summary, qty, note)',
+      'id, queue_no, queue_label, customer_name, source, status, item_count, total_satang, allergy_note, queued_at, started_at, ready_at, last_called_at, pickup_at, release_at, order_items(menu_name, kitchen_summary, qty, note)',
     )
     .eq('shop_id', shopId)
     .in('status', ['queued', 'cooking', 'ready'])
@@ -46,6 +46,8 @@ export async function getVendorBoard(shopId: string): Promise<VendorBoardData | 
         qty: i.qty,
         note: i.note,
       })),
+      pickupAt: r.pickup_at,
+      releaseAt: r.release_at,
       queuedAt: r.queued_at!,
       startedAt: r.started_at,
       readyAt: r.ready_at,

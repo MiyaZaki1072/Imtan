@@ -34,6 +34,9 @@ export interface OrderViewData {
   items: OrderViewItem[];
   allergyNote: string | null;
   paymentExpiresAt: string | null;
+  /** Pre-order: when the customer will collect, and when the shop is told to start. */
+  pickupAt: string | null;
+  releaseAt: string | null;
   paidAt: string | null;
   queuedAt: string | null;
   startedAt: string | null;
@@ -72,4 +75,18 @@ export interface HomeData {
   userId: string;
   shops: HomeShop[];
   mine: HomeMine | null;
+}
+
+/** A finished order in "ประวัติการสั่ง". */
+export interface HistoryEntry {
+  orderId: string;
+  shopSlug: string;
+  shopName: string;
+  queueLabel: string | null;
+  status: 'picked_up' | 'cancelled';
+  createdAt: string;
+  totalSatang: number | null;
+  /** Paid to ready, in seconds, when both are known. */
+  actualWaitSeconds: number | null;
+  items: { kitchenSummary: string; qty: number }[];
 }
