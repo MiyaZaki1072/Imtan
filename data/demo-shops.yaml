@@ -1,0 +1,2095 @@
+# ข้อมูลร้านสำหรับเดโม (seed) — อิ่มทัน · schema v2 (ตรงกับ PLAN.md §4a ทุก key)
+# ไฟล์นี้สร้างจากสคริปต์ และผ่านการตรวจความถูกต้องแล้ว:
+#   - ทุกเมนูมีแหล่งราคาเดียว: variants (ตารางราคารายชุด) หรือ tier_prices (กลุ่ม tiered) หรือ base_price
+#   - ตารางราคามีครบทุกชุดของกลุ่ม variant, กลุ่ม variant และ choice แบบเลือก 1 มีค่าเริ่มต้น 1 ตัว
+#   - ingredient ทุกตัวที่อ้างถึงอยู่ในรายการ ingredients ของร้าน
+#   - ราคาบวกเพิ่ม (price) มีได้เฉพาะ option ในกลุ่ม kind = choice
+# confirmed = มาจาก research ของทีม · assumed = สมมติ แม่ค้าแก้ได้ในแอป
+# ห้ามเดาเพิ่ม: ถ้าข้อมูลไม่พอ ให้ถามทีม
+schema_version: 2
+units:
+  price: baht (seed × 100 → satang)
+  cook_seconds: seconds per item
+  manual_seconds_per_item: seconds per item, used when wait_mode = manual
+shops:
+- slug: pi-som
+  name: ไก่กรอบ ซอย 9 พี่ส้ม
+  category: ข้าวราดของทอด
+  queue_prefix: ส้ม
+  wait_mode: auto
+  manual_seconds_per_item: 90
+  confirmed:
+  - ชื่อร้าน
+  - ข้าวราดทุกจาน
+  - โปรตีน 1 อย่าง ฿50 / 2 อย่าง ฿60
+  - ทุกโปรตีนราคาเท่ากัน
+  - รายการโปรตีน (เท่าที่จำได้)
+  - ไข่ข้น/แกงกะหรี่ เป็น add-on เลือกได้ทั้งสองหรือไม่เอา
+  - สั่งโปรตีนอย่างเดียวได้ (ราคาไม่ทราบ)
+  assumed:
+  - ไข่ข้น/แกงกะหรี่ +฿10
+  - โปรตีนอย่างเดียว ฿45/฿55
+  - เลือกโปรตีนสูงสุด 2 อย่าง
+  - เวลาทำ
+  - ตัวนำหน้าคิว
+  - เปิดหมายเหตุและช่องแพ้อาหารเหมือนเจ๊บึก
+  ingredients:
+  - ไก่กรอบ
+  - ปลาทอด
+  - หมูญี่ปุ่น
+  - หมูบาบีคิว
+  - ไก่ทอดเกาหลี
+  - ไข่ข้น
+  - แกงกะหรี่
+  menus:
+  - name: ข้าวราด เลือกโปรตีน
+    category: ข้าวราด
+    cook_seconds: 90
+    groups:
+    - name: โปรตีน
+      kind: tiered
+      min: 1
+      max: 2
+      tier_prices:
+        1: 50
+        2: 60
+      options:
+      - name: ไก่กรอบ
+        price: 0
+        ingredient: ไก่กรอบ
+      - name: ปลาทอด
+        price: 0
+        ingredient: ปลาทอด
+      - name: หมูญี่ปุ่น
+        price: 0
+        ingredient: หมูญี่ปุ่น
+      - name: หมูบาบีคิว
+        price: 0
+        ingredient: หมูบาบีคิว
+      - name: ไก่ทอดเกาหลี
+        price: 0
+        ingredient: ไก่ทอดเกาหลี
+    - name: ราดเพิ่ม
+      kind: choice
+      min: 0
+      max: 2
+      options:
+      - name: ไข่ข้น
+        price: 10
+        ingredient: ไข่ข้น
+      - name: แกงกะหรี่
+        price: 10
+        ingredient: แกงกะหรี่
+  - name: โปรตีนอย่างเดียว (ไม่เอาข้าว)
+    category: ข้าวราด
+    cook_seconds: 90
+    groups:
+    - name: โปรตีน
+      kind: tiered
+      min: 1
+      max: 2
+      tier_prices:
+        1: 45
+        2: 55
+      options:
+      - name: ไก่กรอบ
+        price: 0
+        ingredient: ไก่กรอบ
+      - name: ปลาทอด
+        price: 0
+        ingredient: ปลาทอด
+      - name: หมูญี่ปุ่น
+        price: 0
+        ingredient: หมูญี่ปุ่น
+      - name: หมูบาบีคิว
+        price: 0
+        ingredient: หมูบาบีคิว
+      - name: ไก่ทอดเกาหลี
+        price: 0
+        ingredient: ไก่ทอดเกาหลี
+    - name: ราดเพิ่ม
+      kind: choice
+      min: 0
+      max: 2
+      options:
+      - name: ไข่ข้น
+        price: 10
+        ingredient: ไข่ข้น
+      - name: แกงกะหรี่
+        price: 10
+        ingredient: แกงกะหรี่
+  allow_item_note: true
+  allow_allergy_note: true
+- slug: tomyum-kaitoon
+  name: ก๋วยเตี๋ยวต้มยำ ไก่ตุ๋น ข้าวหมูแดง
+  category: ก๋วยเตี๋ยว / ข้าวหมูแดง
+  queue_prefix: ไก่ตุ๋น
+  wait_mode: auto
+  manual_seconds_per_item: 120
+  confirmed:
+  - มีเส้นทั่วไปครบ
+  - น้ำใส
+  - เลือกเครื่องได้หมด
+  - ข้าวหมูแดง/หมูกรอบ/หมูมะนาว/ต้มเลือดหมู เป็นราดข้าว
+  assumed:
+  - ชื่อร้าน
+  - มีน้ำซุปต้มยำด้วย (จากชื่อร้าน)
+  - รายการเส้นและเครื่อง
+  - ราคา
+  - เวลาทำ
+  - ตัวนำหน้าคิว
+  - เปิดหมายเหตุและช่องแพ้อาหารเหมือนเจ๊บึก
+  ingredients:
+  - หมูชิ้น
+  - หมูสับ
+  - ลูกชิ้นหมู
+  - ตับหมู
+  - ไก่ตุ๋น
+  - หมูแดง
+  - หมูกรอบ
+  - หมูมะนาว
+  - เลือดหมู
+  menus:
+  - name: ก๋วยเตี๋ยวหมู
+    category: ก๋วยเตี๋ยว
+    cook_seconds: 120
+    groups:
+    - name: เส้น
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: เส้นเล็ก
+        price: 0
+        default: true
+      - name: เส้นใหญ่
+        price: 0
+      - name: เส้นหมี่
+        price: 0
+      - name: บะหมี่
+        price: 0
+      - name: วุ้นเส้น
+        price: 0
+      - name: เกาเหลา (ไม่ใส่เส้น)
+        price: 0
+    - name: น้ำซุป
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: น้ำใส
+        price: 0
+        default: true
+      - name: ต้มยำ
+        price: 0
+    - name: ความเผ็ด
+      kind: choice
+      min: 1
+      max: 1
+      show_when:
+        group: น้ำซุป
+        options:
+        - ต้มยำ
+      options:
+      - name: ไม่ใส่พริก
+        price: 0
+      - name: เผ็ดน้อย
+        price: 0
+      - name: ปกติ
+        price: 0
+        default: true
+      - name: เผ็ดมาก
+        price: 0
+    - name: เครื่อง
+      kind: toppings
+      min: 0
+      max: 4
+      options:
+      - name: หมูชิ้น
+        price: 0
+        ingredient: หมูชิ้น
+        default: true
+      - name: หมูสับ
+        price: 0
+        ingredient: หมูสับ
+        default: true
+      - name: ลูกชิ้นหมู
+        price: 0
+        ingredient: ลูกชิ้นหมู
+        default: true
+      - name: ตับหมู
+        price: 0
+        ingredient: ตับหมู
+        default: true
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      note: พิเศษ = เส้นและเครื่องเพิ่ม
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    variants:
+    - options:
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        ขนาด: พิเศษ
+      price: 60
+  - name: ก๋วยเตี๋ยวไก่ตุ๋น
+    category: ก๋วยเตี๋ยว
+    cook_seconds: 120
+    requires_ingredients:
+    - ไก่ตุ๋น
+    groups:
+    - name: เส้น
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: เส้นเล็ก
+        price: 0
+        default: true
+      - name: เส้นใหญ่
+        price: 0
+      - name: เส้นหมี่
+        price: 0
+      - name: บะหมี่
+        price: 0
+      - name: วุ้นเส้น
+        price: 0
+      - name: เกาเหลา (ไม่ใส่เส้น)
+        price: 0
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    variants:
+    - options:
+        ขนาด: ธรรมดา
+      price: 55
+    - options:
+        ขนาด: พิเศษ
+      price: 65
+  - name: ข้าวหมูแดง
+    category: ข้าวราด
+    cook_seconds: 60
+    requires_ingredients:
+    - หมูแดง
+    groups:
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    variants:
+    - options:
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        ขนาด: พิเศษ
+      price: 60
+  - name: ข้าวหมูกรอบ
+    category: ข้าวราด
+    cook_seconds: 60
+    requires_ingredients:
+    - หมูกรอบ
+    groups:
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    variants:
+    - options:
+        ขนาด: ธรรมดา
+      price: 55
+    - options:
+        ขนาด: พิเศษ
+      price: 65
+  - name: ข้าวหมูมะนาว
+    category: ข้าวราด
+    cook_seconds: 90
+    requires_ingredients:
+    - หมูมะนาว
+    groups:
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    variants:
+    - options:
+        ขนาด: ธรรมดา
+      price: 55
+    - options:
+        ขนาด: พิเศษ
+      price: 65
+  - name: ข้าวต้มเลือดหมู
+    category: ข้าวราด
+    cook_seconds: 90
+    requires_ingredients:
+    - เลือดหมู
+    groups:
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    variants:
+    - options:
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        ขนาด: พิเศษ
+      price: 60
+  allow_item_note: true
+  allow_allergy_note: true
+- slug: niao-kai
+  name: เหนียวไก่วิศวะจุฬา
+  category: อาหารอีสาน
+  queue_prefix: เหนียว
+  wait_mode: auto
+  manual_seconds_per_item: 150
+  confirmed:
+  - ชื่อร้าน
+  - ประเภทร้านอาหารอีสาน
+  - รายการเมนู
+  - เหนียวไก่ = ข้าวเหนียว + ไก่ทอด
+  - เมนูอื่นไม่มีข้าวเหนียว ต้องสั่งแยก
+  - ไม่มีตัวเลือกความเผ็ด
+  assumed:
+  - ราคาทุกเมนู
+  - ไม่มีขนาดพิเศษ
+  - เวลาทำ
+  - ตัวนำหน้าคิว
+  - เปิดหมายเหตุและช่องแพ้อาหารเหมือนเจ๊บึก
+  ingredients:
+  - ไก่ทอด
+  - ไก่สับ
+  - แซลมอน
+  - หมูน้ำตก
+  - วุ้นเส้น
+  - ปลาดอลลี่
+  - คอหมู
+  - ปลาดุกฟู
+  - ข้าวเหนียว
+  menus:
+  - name: เหนียวไก่ (ข้าวเหนียว + ไก่ทอด)
+    category: อาหารอีสาน
+    cook_seconds: 60
+    base_price: 45
+    requires_ingredients:
+    - ไก่ทอด
+    - ข้าวเหนียว
+    groups: []
+  - name: ลาบไก่
+    category: อาหารอีสาน
+    cook_seconds: 180
+    base_price: 50
+    requires_ingredients:
+    - ไก่สับ
+    groups: []
+  - name: ลาบแซลมอน
+    category: อาหารอีสาน
+    cook_seconds: 150
+    base_price: 80
+    requires_ingredients:
+    - แซลมอน
+    groups: []
+  - name: น้ำตกหมู
+    category: อาหารอีสาน
+    cook_seconds: 180
+    base_price: 60
+    requires_ingredients:
+    - หมูน้ำตก
+    groups: []
+  - name: ลาบวุ้นเส้น
+    category: อาหารอีสาน
+    cook_seconds: 150
+    base_price: 50
+    requires_ingredients:
+    - วุ้นเส้น
+    groups: []
+  - name: ลาบปลาดอลลี่
+    category: อาหารอีสาน
+    cook_seconds: 180
+    base_price: 60
+    requires_ingredients:
+    - ปลาดอลลี่
+    groups: []
+  - name: คอหมูย่าง
+    category: อาหารอีสาน
+    cook_seconds: 120
+    base_price: 70
+    requires_ingredients:
+    - คอหมู
+    groups: []
+  - name: ยำปลาดุกฟู
+    category: อาหารอีสาน
+    cook_seconds: 150
+    base_price: 60
+    requires_ingredients:
+    - ปลาดุกฟู
+    groups: []
+  - name: ข้าวเหนียว
+    category: ข้าว
+    cook_seconds: 10
+    base_price: 10
+    requires_ingredients:
+    - ข้าวเหนียว
+    groups: []
+    pair_only: true
+  allow_item_note: true
+  allow_allergy_note: true
+- slug: namtok
+  name: ก๋วยเตี๋ยวน้ำตก
+  category: ก๋วยเตี๋ยว / โจ๊ก
+  queue_prefix: น้ำตก
+  wait_mode: auto
+  manual_seconds_per_item: 120
+  confirmed:
+  - มีเส้นทั่วไปครบ
+  - น้ำซุป น้ำตก/น้ำใส/ต้มยำ
+  - มีแบบใส่ทุกอย่าง
+  - มีพิเศษ
+  - มีน่องไก่
+  - เมนู โจ๊กหมู ไข่ลวก ข้าวเปล่า ต้มเลือดหมู ก๋วยจั๊บ
+  - ก๋วยจั๊บ น้ำใส เส้นใหญ่
+  assumed:
+  - ชื่อร้าน
+  - รายการเครื่อง
+  - น่องไก่เป็น add-on +฿20
+  - ไข่ลวกขายชุด 2 ฟอง
+  - ตัวเลือกโจ๊ก
+  - ราคา
+  - เวลาทำ
+  - ตัวนำหน้าคิว
+  - เปิดหมายเหตุและช่องแพ้อาหารเหมือนเจ๊บึก
+  ingredients:
+  - หมูชิ้น
+  - หมูสับ
+  - ลูกชิ้นหมู
+  - ตับหมู
+  - หมูตุ๋น
+  - น่องไก่
+  - โจ๊ก
+  - ไข่
+  - เลือดหมู
+  - เส้นก๋วยจั๊บ
+  - ข้าวสวย
+  menus:
+  - name: ก๋วยเตี๋ยวหมู
+    category: ก๋วยเตี๋ยว
+    cook_seconds: 120
+    groups:
+    - name: เส้น
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: เส้นเล็ก
+        price: 0
+        default: true
+      - name: เส้นใหญ่
+        price: 0
+      - name: เส้นหมี่
+        price: 0
+      - name: บะหมี่
+        price: 0
+      - name: วุ้นเส้น
+        price: 0
+      - name: เกาเหลา (ไม่ใส่เส้น)
+        price: 0
+    - name: น้ำซุป
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: น้ำตก
+        price: 0
+        default: true
+      - name: น้ำใส
+        price: 0
+      - name: ต้มยำ
+        price: 0
+    - name: ความเผ็ด
+      kind: choice
+      min: 1
+      max: 1
+      show_when:
+        group: น้ำซุป
+        options:
+        - น้ำตก
+        - ต้มยำ
+      options:
+      - name: ไม่ใส่พริก
+        price: 0
+      - name: เผ็ดน้อย
+        price: 0
+      - name: ปกติ
+        price: 0
+        default: true
+      - name: เผ็ดมาก
+        price: 0
+    - name: เครื่อง
+      kind: toppings
+      min: 0
+      max: 5
+      select_all_label: ใส่ทุกอย่าง
+      options:
+      - name: หมูชิ้น
+        price: 0
+        ingredient: หมูชิ้น
+        default: true
+      - name: หมูสับ
+        price: 0
+        ingredient: หมูสับ
+        default: true
+      - name: ลูกชิ้นหมู
+        price: 0
+        ingredient: ลูกชิ้นหมู
+        default: true
+      - name: ตับหมู
+        price: 0
+        ingredient: ตับหมู
+        default: true
+      - name: หมูตุ๋น
+        price: 0
+        ingredient: หมูตุ๋น
+        default: true
+    - name: เพิ่ม
+      kind: choice
+      min: 0
+      max: 1
+      options:
+      - name: น่องไก่
+        price: 20
+        ingredient: น่องไก่
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      note: พิเศษ = เส้นและเครื่องเพิ่ม
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    variants:
+    - options:
+        ขนาด: ธรรมดา
+      price: 45
+    - options:
+        ขนาด: พิเศษ
+      price: 55
+  - name: ก๋วยจั๊บ (น้ำใส เส้นใหญ่)
+    category: ก๋วยเตี๋ยว
+    cook_seconds: 120
+    requires_ingredients:
+    - เส้นก๋วยจั๊บ
+    groups:
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    variants:
+    - options:
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        ขนาด: พิเศษ
+      price: 60
+  - name: โจ๊กหมู
+    category: โจ๊ก
+    cook_seconds: 60
+    base_price: 40
+    requires_ingredients:
+    - โจ๊ก
+    groups:
+    - name: เพิ่ม
+      kind: choice
+      min: 0
+      max: 1
+      options:
+      - name: ใส่ไข่
+        price: 10
+        ingredient: ไข่
+    - name: ไม่ใส่
+      kind: remove
+      min: 0
+      max: 2
+      options:
+      - name: ขิง
+        price: 0
+      - name: ต้นหอม
+        price: 0
+  - name: ต้มเลือดหมู
+    category: กับข้าว
+    cook_seconds: 90
+    base_price: 50
+    requires_ingredients:
+    - เลือดหมู
+    groups: []
+  - name: ไข่ลวก (2 ฟอง)
+    category: อื่น ๆ
+    cook_seconds: 60
+    base_price: 20
+    requires_ingredients:
+    - ไข่
+    groups: []
+  - name: ข้าวเปล่า
+    category: ข้าว
+    cook_seconds: 10
+    base_price: 10
+    requires_ingredients:
+    - ข้าวสวย
+    groups: []
+    pair_only: true
+  allow_item_note: true
+  allow_allergy_note: true
+- slug: jae-buek
+  name: เจ๊บึก
+  category: อาหารตามสั่ง
+  queue_prefix: บึก
+  wait_mode: auto
+  manual_seconds_per_item: 240
+  confirmed:
+  - ชื่อร้าน
+  - ทั้ง 10 กลุ่มเมนูและโปรตีนตามไฟล์ research
+  - โครงสร้างตัวเลือกตามไฟล์ research
+  - ความเผ็ด 4 ระดับ
+  - หมายเหตุอิสระได้
+  - มีช่องแพ้อาหาร
+  - ไม่มีความสุกของหมู/ไก่
+  - ราคาแยกรายชุด ไม่ใช้สูตรบวกทุกเมนู
+  assumed:
+  - ราคาทุกชุด (สร้างจากราคาเริ่ม + กับข้าว ฿30 + พิเศษ ฿10 แล้วเขียนเป็นแถวแยก)
+  - ไข่ดาว +10 ไข่เจียว +15 เพิ่มเนื้อ +20 เพิ่มข้าว +10
+  - รายการเส้นของร้าน
+  - รายการวัตถุดิบที่ตัดออกได้ (ทีมให้ใส่ให้หมด)
+  - เวลาทำ
+  - ตัวนำหน้าคิว
+  ingredients:
+  - หมูสับ
+  - หมูชิ้น
+  - ไก่
+  - หมูกรอบ
+  - กุ้ง
+  - ปลาหมึก
+  - ปู
+  - ทะเล
+  - ไข่
+  - ข้าวสวย
+  - ใบกะเพรา
+  - คะน้า
+  - เส้นใหญ่
+  - เส้นหมี่
+  - สปาเกตตี
+  menus:
+  - name: ผัดกะเพรา
+    category: ผัด / ราดข้าว
+    cook_seconds: 240
+    groups:
+    - name: เนื้อสัตว์
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: หมูสับ
+        price: 0
+        ingredient: หมูสับ
+        default: true
+      - name: หมูชิ้น
+        price: 0
+        ingredient: หมูชิ้น
+      - name: ไก่
+        price: 0
+        ingredient: ไก่
+      - name: หมูกรอบ
+        price: 0
+        ingredient: หมูกรอบ
+      - name: กุ้ง
+        price: 0
+        ingredient: กุ้ง
+      - name: ปลาหมึก
+        price: 0
+        ingredient: ปลาหมึก
+    - name: รูปแบบเสิร์ฟ
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: ราดข้าว
+        price: 0
+        ingredient: ข้าวสวย
+        default: true
+      - name: เป็นกับข้าว
+        price: 0
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      note: พิเศษ = เนื้อและข้าวเพิ่ม
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    - name: ความเผ็ด
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: ไม่ใส่พริก
+        price: 0
+      - name: เผ็ดน้อย
+        price: 0
+      - name: ปกติ
+        price: 0
+        default: true
+      - name: เผ็ดมาก
+        price: 0
+    - name: ไข่เพิ่ม
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: ไม่เพิ่ม
+        price: 0
+        default: true
+      - name: ไข่ดาว
+        price: 10
+        ingredient: ไข่
+      - name: ไข่เจียว
+        price: 15
+        ingredient: ไข่
+    - name: ความสุกไข่ดาว
+      kind: choice
+      min: 1
+      max: 1
+      show_when:
+        group: ไข่เพิ่ม
+        options:
+        - ไข่ดาว
+      options:
+      - name: ไข่แดงสุก
+        price: 0
+        default: true
+      - name: ไข่แดงไม่สุก
+        price: 0
+    - name: เพิ่มอื่น ๆ
+      kind: choice
+      min: 0
+      max: 2
+      options:
+      - name: เพิ่มเนื้อ
+        price: 20
+      - name: เพิ่มข้าว
+        price: 10
+        ingredient: ข้าวสวย
+    - name: ไม่ใส่
+      kind: remove
+      min: 0
+      max: 4
+      options:
+      - name: กระเทียม
+        price: 0
+      - name: พริก
+        price: 0
+      - name: ถั่วฝักยาว
+        price: 0
+      - name: หอมใหญ่
+        price: 0
+    variants:
+    - options:
+        เนื้อสัตว์: หมูสับ
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: หมูสับ
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: หมูสับ
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 80
+    - options:
+        เนื้อสัตว์: หมูสับ
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 90
+    - options:
+        เนื้อสัตว์: หมูชิ้น
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: หมูชิ้น
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: หมูชิ้น
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 80
+    - options:
+        เนื้อสัตว์: หมูชิ้น
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 90
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 80
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 90
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 60
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 70
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 90
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 100
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 65
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 75
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 95
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 105
+    - options:
+        เนื้อสัตว์: ปลาหมึก
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 65
+    - options:
+        เนื้อสัตว์: ปลาหมึก
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 75
+    - options:
+        เนื้อสัตว์: ปลาหมึก
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 95
+    - options:
+        เนื้อสัตว์: ปลาหมึก
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 105
+    requires_ingredients:
+    - ใบกะเพรา
+  - name: ผัดกระเทียม
+    category: ผัด / ราดข้าว
+    cook_seconds: 240
+    groups:
+    - name: เนื้อสัตว์
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: หมู
+        price: 0
+        ingredient: หมูชิ้น
+        default: true
+      - name: ไก่
+        price: 0
+        ingredient: ไก่
+      - name: หมูกรอบ
+        price: 0
+        ingredient: หมูกรอบ
+      - name: กุ้ง
+        price: 0
+        ingredient: กุ้ง
+    - name: รูปแบบเสิร์ฟ
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: ราดข้าว
+        price: 0
+        ingredient: ข้าวสวย
+        default: true
+      - name: เป็นกับข้าว
+        price: 0
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      note: พิเศษ = เนื้อและข้าวเพิ่ม
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    - name: กระเทียม
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: ปกติ
+        price: 0
+        default: true
+      - name: เพิ่มกระเทียม
+        price: 0
+    - name: ไข่เพิ่ม
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: ไม่เพิ่ม
+        price: 0
+        default: true
+      - name: ไข่ดาว
+        price: 10
+        ingredient: ไข่
+      - name: ไข่เจียว
+        price: 15
+        ingredient: ไข่
+    - name: ความสุกไข่ดาว
+      kind: choice
+      min: 1
+      max: 1
+      show_when:
+        group: ไข่เพิ่ม
+        options:
+        - ไข่ดาว
+      options:
+      - name: ไข่แดงสุก
+        price: 0
+        default: true
+      - name: ไข่แดงไม่สุก
+        price: 0
+    - name: เพิ่มอื่น ๆ
+      kind: choice
+      min: 0
+      max: 2
+      options:
+      - name: เพิ่มเนื้อ
+        price: 20
+      - name: เพิ่มข้าว
+        price: 10
+        ingredient: ข้าวสวย
+    - name: ไม่ใส่
+      kind: remove
+      min: 0
+      max: 1
+      options:
+      - name: พริกไทย
+        price: 0
+    variants:
+    - options:
+        เนื้อสัตว์: หมู
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: หมู
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: หมู
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 80
+    - options:
+        เนื้อสัตว์: หมู
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 90
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 80
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 90
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 60
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 70
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 90
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 100
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 65
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 75
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 95
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 105
+  - name: ผัดพริกแกง
+    category: ผัด / ราดข้าว
+    cook_seconds: 240
+    groups:
+    - name: เนื้อสัตว์
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: หมู
+        price: 0
+        ingredient: หมูชิ้น
+        default: true
+      - name: ไก่
+        price: 0
+        ingredient: ไก่
+      - name: หมูกรอบ
+        price: 0
+        ingredient: หมูกรอบ
+      - name: กุ้ง
+        price: 0
+        ingredient: กุ้ง
+    - name: รูปแบบเสิร์ฟ
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: ราดข้าว
+        price: 0
+        ingredient: ข้าวสวย
+        default: true
+      - name: เป็นกับข้าว
+        price: 0
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      note: พิเศษ = เนื้อและข้าวเพิ่ม
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    - name: ความเผ็ด
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: ไม่ใส่พริก
+        price: 0
+      - name: เผ็ดน้อย
+        price: 0
+      - name: ปกติ
+        price: 0
+        default: true
+      - name: เผ็ดมาก
+        price: 0
+    - name: ไข่เพิ่ม
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: ไม่เพิ่ม
+        price: 0
+        default: true
+      - name: ไข่ดาว
+        price: 10
+        ingredient: ไข่
+      - name: ไข่เจียว
+        price: 15
+        ingredient: ไข่
+    - name: ความสุกไข่ดาว
+      kind: choice
+      min: 1
+      max: 1
+      show_when:
+        group: ไข่เพิ่ม
+        options:
+        - ไข่ดาว
+      options:
+      - name: ไข่แดงสุก
+        price: 0
+        default: true
+      - name: ไข่แดงไม่สุก
+        price: 0
+    - name: เพิ่มอื่น ๆ
+      kind: choice
+      min: 0
+      max: 2
+      options:
+      - name: เพิ่มเนื้อ
+        price: 20
+      - name: เพิ่มข้าว
+        price: 10
+        ingredient: ข้าวสวย
+    - name: ไม่ใส่
+      kind: remove
+      min: 0
+      max: 2
+      options:
+      - name: ถั่วฝักยาว
+        price: 0
+      - name: ใบมะกรูด
+        price: 0
+    variants:
+    - options:
+        เนื้อสัตว์: หมู
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: หมู
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: หมู
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 80
+    - options:
+        เนื้อสัตว์: หมู
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 90
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 80
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 90
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 60
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 70
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 90
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 100
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 65
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 75
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 95
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 105
+  - name: ผัดผงกะหรี่
+    category: ผัด / ราดข้าว
+    cook_seconds: 270
+    groups:
+    - name: เนื้อสัตว์
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: ไก่
+        price: 0
+        ingredient: ไก่
+        default: true
+      - name: หมูกรอบ
+        price: 0
+        ingredient: หมูกรอบ
+      - name: กุ้ง
+        price: 0
+        ingredient: กุ้ง
+      - name: ปลาหมึก
+        price: 0
+        ingredient: ปลาหมึก
+    - name: รูปแบบเสิร์ฟ
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: ราดข้าว
+        price: 0
+        ingredient: ข้าวสวย
+        default: true
+      - name: เป็นกับข้าว
+        price: 0
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      note: พิเศษ = เนื้อและข้าวเพิ่ม
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    - name: ไข่เพิ่ม
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: ไม่เพิ่ม
+        price: 0
+        default: true
+      - name: ไข่ดาว
+        price: 10
+        ingredient: ไข่
+      - name: ไข่เจียว
+        price: 15
+        ingredient: ไข่
+    - name: ความสุกไข่ดาว
+      kind: choice
+      min: 1
+      max: 1
+      show_when:
+        group: ไข่เพิ่ม
+        options:
+        - ไข่ดาว
+      options:
+      - name: ไข่แดงสุก
+        price: 0
+        default: true
+      - name: ไข่แดงไม่สุก
+        price: 0
+    - name: เพิ่มอื่น ๆ
+      kind: choice
+      min: 0
+      max: 2
+      options:
+      - name: เพิ่มเนื้อ
+        price: 20
+      - name: เพิ่มข้าว
+        price: 10
+        ingredient: ข้าวสวย
+    - name: ไม่ใส่
+      kind: remove
+      min: 0
+      max: 3
+      options:
+      - name: หอมใหญ่
+        price: 0
+      - name: ขึ้นฉ่าย
+        price: 0
+      - name: ต้นหอม
+        price: 0
+    variants:
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 80
+    - options:
+        เนื้อสัตว์: ไก่
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 90
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 60
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 70
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 90
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 100
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 65
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 75
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 95
+    - options:
+        เนื้อสัตว์: กุ้ง
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 105
+    - options:
+        เนื้อสัตว์: ปลาหมึก
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 65
+    - options:
+        เนื้อสัตว์: ปลาหมึก
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 75
+    - options:
+        เนื้อสัตว์: ปลาหมึก
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 95
+    - options:
+        เนื้อสัตว์: ปลาหมึก
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 105
+  - name: ผัดคะน้า
+    category: ผัด / ราดข้าว
+    cook_seconds: 210
+    groups:
+    - name: เนื้อสัตว์
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: หมูชิ้น
+        price: 0
+        ingredient: หมูชิ้น
+        default: true
+      - name: หมูกรอบ
+        price: 0
+        ingredient: หมูกรอบ
+    - name: รูปแบบเสิร์ฟ
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: ราดข้าว
+        price: 0
+        ingredient: ข้าวสวย
+        default: true
+      - name: เป็นกับข้าว
+        price: 0
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      note: พิเศษ = เนื้อและข้าวเพิ่ม
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    - name: ความเผ็ด
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: ไม่ใส่พริก
+        price: 0
+      - name: เผ็ดน้อย
+        price: 0
+      - name: ปกติ
+        price: 0
+        default: true
+      - name: เผ็ดมาก
+        price: 0
+    - name: ไข่เพิ่ม
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: ไม่เพิ่ม
+        price: 0
+        default: true
+      - name: ไข่ดาว
+        price: 10
+        ingredient: ไข่
+      - name: ไข่เจียว
+        price: 15
+        ingredient: ไข่
+    - name: ความสุกไข่ดาว
+      kind: choice
+      min: 1
+      max: 1
+      show_when:
+        group: ไข่เพิ่ม
+        options:
+        - ไข่ดาว
+      options:
+      - name: ไข่แดงสุก
+        price: 0
+        default: true
+      - name: ไข่แดงไม่สุก
+        price: 0
+    - name: เพิ่มอื่น ๆ
+      kind: choice
+      min: 0
+      max: 2
+      options:
+      - name: เพิ่มเนื้อ
+        price: 20
+      - name: เพิ่มข้าว
+        price: 10
+        ingredient: ข้าวสวย
+    - name: ไม่ใส่
+      kind: remove
+      min: 0
+      max: 2
+      options:
+      - name: กระเทียม
+        price: 0
+      - name: พริก
+        price: 0
+    variants:
+    - options:
+        เนื้อสัตว์: หมูชิ้น
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: หมูชิ้น
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: หมูชิ้น
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 80
+    - options:
+        เนื้อสัตว์: หมูชิ้น
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 90
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: ธรรมดา
+      price: 60
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: ราดข้าว
+        ขนาด: พิเศษ
+      price: 70
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: ธรรมดา
+      price: 90
+    - options:
+        เนื้อสัตว์: หมูกรอบ
+        รูปแบบเสิร์ฟ: เป็นกับข้าว
+        ขนาด: พิเศษ
+      price: 100
+    requires_ingredients:
+    - คะน้า
+  - name: ข้าวผัด
+    category: ข้าวผัด
+    cook_seconds: 300
+    groups:
+    - name: เนื้อสัตว์
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: หมู
+        price: 0
+        ingredient: หมูชิ้น
+        default: true
+      - name: ไก่
+        price: 0
+        ingredient: ไก่
+      - name: กุ้ง
+        price: 0
+        ingredient: กุ้ง
+      - name: ปู
+        price: 0
+        ingredient: ปู
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      note: พิเศษ = เนื้อและข้าวเพิ่ม
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    - name: ไข่เพิ่ม
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: ไม่เพิ่ม
+        price: 0
+        default: true
+      - name: ไข่ดาว
+        price: 10
+        ingredient: ไข่
+      - name: ไข่เจียว
+        price: 15
+        ingredient: ไข่
+    - name: ความสุกไข่ดาว
+      kind: choice
+      min: 1
+      max: 1
+      show_when:
+        group: ไข่เพิ่ม
+        options:
+        - ไข่ดาว
+      options:
+      - name: ไข่แดงสุก
+        price: 0
+        default: true
+      - name: ไข่แดงไม่สุก
+        price: 0
+    - name: เพิ่มอื่น ๆ
+      kind: choice
+      min: 0
+      max: 1
+      options:
+      - name: เพิ่มเนื้อ
+        price: 20
+    - name: ไม่ใส่
+      kind: remove
+      min: 0
+      max: 3
+      options:
+      - name: หอมใหญ่
+        price: 0
+      - name: มะเขือเทศ
+        price: 0
+      - name: ต้นหอม
+        price: 0
+    variants:
+    - options:
+        เนื้อสัตว์: หมู
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: หมู
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: ไก่
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: ไก่
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: กุ้ง
+        ขนาด: ธรรมดา
+      price: 65
+    - options:
+        เนื้อสัตว์: กุ้ง
+        ขนาด: พิเศษ
+      price: 75
+    - options:
+        เนื้อสัตว์: ปู
+        ขนาด: ธรรมดา
+      price: 70
+    - options:
+        เนื้อสัตว์: ปู
+        ขนาด: พิเศษ
+      price: 80
+  - name: ผัดซีอิ๊ว
+    category: เส้น
+    cook_seconds: 270
+    groups:
+    - name: เนื้อสัตว์
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: หมู
+        price: 0
+        ingredient: หมูชิ้น
+        default: true
+      - name: ไก่
+        price: 0
+        ingredient: ไก่
+      - name: กุ้ง
+        price: 0
+        ingredient: กุ้ง
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      note: พิเศษ = เนื้อและข้าวเพิ่ม
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    - name: เส้น
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: เส้นใหญ่
+        price: 0
+        default: true
+        ingredient: เส้นใหญ่
+      - name: เส้นหมี่
+        price: 0
+        ingredient: เส้นหมี่
+    - name: เพิ่มอื่น ๆ
+      kind: choice
+      min: 0
+      max: 1
+      options:
+      - name: เพิ่มเนื้อ
+        price: 20
+    - name: ไม่ใส่
+      kind: remove
+      min: 0
+      max: 2
+      options:
+      - name: คะน้า
+        price: 0
+      - name: ไข่
+        price: 0
+    variants:
+    - options:
+        เนื้อสัตว์: หมู
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: หมู
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: ไก่
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: ไก่
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: กุ้ง
+        ขนาด: ธรรมดา
+      price: 65
+    - options:
+        เนื้อสัตว์: กุ้ง
+        ขนาด: พิเศษ
+      price: 75
+  - name: ผัดขี้เมา
+    category: เส้น
+    cook_seconds: 270
+    groups:
+    - name: เนื้อสัตว์
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: หมู
+        price: 0
+        ingredient: หมูชิ้น
+        default: true
+      - name: ไก่
+        price: 0
+        ingredient: ไก่
+      - name: กุ้ง
+        price: 0
+        ingredient: กุ้ง
+      - name: ปลาหมึก
+        price: 0
+        ingredient: ปลาหมึก
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      note: พิเศษ = เนื้อและข้าวเพิ่ม
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    - name: เส้น
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: เส้นใหญ่
+        price: 0
+        default: true
+        ingredient: เส้นใหญ่
+      - name: เส้นหมี่
+        price: 0
+        ingredient: เส้นหมี่
+      - name: สปาเกตตี
+        price: 0
+        ingredient: สปาเกตตี
+    - name: ความเผ็ด
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: ไม่ใส่พริก
+        price: 0
+      - name: เผ็ดน้อย
+        price: 0
+      - name: ปกติ
+        price: 0
+        default: true
+      - name: เผ็ดมาก
+        price: 0
+    - name: เพิ่มอื่น ๆ
+      kind: choice
+      min: 0
+      max: 1
+      options:
+      - name: เพิ่มเนื้อ
+        price: 20
+    - name: ไม่ใส่
+      kind: remove
+      min: 0
+      max: 3
+      options:
+      - name: ข้าวโพดอ่อน
+        price: 0
+      - name: พริกไทยอ่อน
+        price: 0
+      - name: ใบกะเพรา
+        price: 0
+    variants:
+    - options:
+        เนื้อสัตว์: หมู
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: หมู
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: ไก่
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: ไก่
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: กุ้ง
+        ขนาด: ธรรมดา
+      price: 65
+    - options:
+        เนื้อสัตว์: กุ้ง
+        ขนาด: พิเศษ
+      price: 75
+    - options:
+        เนื้อสัตว์: ปลาหมึก
+        ขนาด: ธรรมดา
+      price: 65
+    - options:
+        เนื้อสัตว์: ปลาหมึก
+        ขนาด: พิเศษ
+      price: 75
+  - name: ราดหน้า
+    category: เส้น
+    cook_seconds: 300
+    groups:
+    - name: เนื้อสัตว์
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: หมู
+        price: 0
+        ingredient: หมูชิ้น
+        default: true
+      - name: ไก่
+        price: 0
+        ingredient: ไก่
+      - name: ทะเล
+        price: 0
+        ingredient: ทะเล
+    - name: ขนาด
+      kind: variant
+      min: 1
+      max: 1
+      note: พิเศษ = เนื้อและข้าวเพิ่ม
+      options:
+      - name: ธรรมดา
+        price: 0
+        default: true
+      - name: พิเศษ
+        price: 0
+    - name: เส้น
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: เส้นใหญ่
+        price: 0
+        default: true
+        ingredient: เส้นใหญ่
+      - name: เส้นหมี่
+        price: 0
+        ingredient: เส้นหมี่
+    - name: เพิ่มอื่น ๆ
+      kind: choice
+      min: 0
+      max: 1
+      options:
+      - name: เพิ่มเนื้อ
+        price: 20
+    - name: ไม่ใส่
+      kind: remove
+      min: 0
+      max: 1
+      options:
+      - name: คะน้า
+        price: 0
+    variants:
+    - options:
+        เนื้อสัตว์: หมู
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: หมู
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: ไก่
+        ขนาด: ธรรมดา
+      price: 50
+    - options:
+        เนื้อสัตว์: ไก่
+        ขนาด: พิเศษ
+      price: 60
+    - options:
+        เนื้อสัตว์: ทะเล
+        ขนาด: ธรรมดา
+      price: 70
+    - options:
+        เนื้อสัตว์: ทะเล
+        ขนาด: พิเศษ
+      price: 80
+  - name: ไข่เจียวราดข้าว
+    category: ไข่
+    cook_seconds: 210
+    requires_ingredients:
+    - ไข่
+    groups:
+    - name: ไส้
+      kind: variant
+      min: 1
+      max: 1
+      options:
+      - name: ไข่ล้วน
+        price: 0
+        default: true
+      - name: หมูสับ
+        price: 0
+        ingredient: หมูสับ
+      - name: กุ้งสับ
+        price: 0
+        ingredient: กุ้ง
+    - name: จำนวนไข่
+      kind: choice
+      min: 1
+      max: 1
+      options:
+      - name: 1 ฟอง
+        price: 0
+        default: true
+      - name: 2 ฟอง
+        price: 10
+      - name: 3 ฟอง
+        price: 20
+    - name: เพิ่มอื่น ๆ
+      kind: choice
+      min: 0
+      max: 2
+      options:
+      - name: เพิ่มเนื้อ
+        price: 20
+      - name: เพิ่มข้าว
+        price: 10
+        ingredient: ข้าวสวย
+    - name: ไม่ใส่
+      kind: remove
+      min: 0
+      max: 1
+      options:
+      - name: ต้นหอม
+        price: 0
+    variants:
+    - options:
+        ไส้: ไข่ล้วน
+      price: 35
+    - options:
+        ไส้: หมูสับ
+      price: 45
+    - options:
+        ไส้: กุ้งสับ
+      price: 55
+  allow_item_note: true
+  allow_allergy_note: true
