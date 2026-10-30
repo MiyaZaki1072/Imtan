@@ -70,6 +70,25 @@ export async function resetDemo(slug: string | 'all'): Promise<{ shops: number }
     check((await db.from('shops').upsert(shopRow, { onConflict: 'id' })).error, 'shop');
 
     const ingredientIds = (key: string) => id(`ingredient:${key}`);
+
+    // Vendors may have added menus, groups, options or ingredients (Phase 7): drop everything
+    // that is not in the seed, and rebuild each seed menu's structure below.
+    const seedMenuIds = shop.menus.map((m) => id(`menu:${m.id}`));
+    const { error: delMenus } = await db
+      .from('menus')
+      .delete()
+      .eq('shop_id', shopId)
+      .not('id', 'in', `(${seedMenuIds.join(',')})`);
+    check(delMenus, 'extra menus');
+    check(
+      (await db.from('menu_variants').delete().in('menu_id', seedMenuIds)).error,
+      'old variants',
+    );
+    check(
+      (await db.from('menu_ingredients').delete().in('menu_id', seedMenuIds)).error,
+      'old links',
+    );
+    check((await db.from('option_groups').delete().in('menu_id', seedMenuIds)).error, 'old groups');
     check(
       (
         await db.from('ingredients').upsert(
@@ -84,8 +103,21 @@ export async function resetDemo(slug: string | 'all'): Promise<{ shops: number }
       ).error,
       'ingredients',
     );
+    const seedIngredientIds = shop.ingredients.map((i) => ingredientIds(i.id));
+    check(
+      (
+        await db
+          .from('ingredients')
+          .delete()
+          .eq('shop_id', shopId)
+          .not('id', 'in', `(${seedIngredientIds.join(',')})`)
+      ).error,
+      'extra ingredients',
+    );
 
     const menus: Insert<'menus'>[] = [];
+    const links: Insert<'menu_ingredients'>[] = [];
+    const groups: Insert<'option_groups'>[] = [];
     const options: Insert<'options'>[] = [];
     const variants: Insert<'menu_variants'>[] = [];
     const tiers: Insert<'group_tier_prices'>[] = [];
@@ -103,8 +135,25 @@ export async function resetDemo(slug: string | 'all'): Promise<{ shops: number }
         deleted_at: null,
         sort: mi,
       });
-      for (const g of m.groups) {
+      for (const ingId of m.ingredientIds)
+        links.push({ menu_id: menuId, ingredient_id: ingredientIds(ingId) });
+      m.groups.forEach((g, gi) => {
         const groupId = id(`group:${g.id}`);
+        groups.push({
+          id: groupId,
+          menu_id: menuId,
+          name: g.name,
+          kind: g.kind,
+          min_select: g.minSelect,
+          max_select: g.maxSelect,
+          sort: gi,
+          show_when_group_id: g.showWhen ? id(`group:${g.showWhen.groupId}`) : null,
+          show_when_option_ids: g.showWhen
+            ? g.showWhen.optionIds.map((o) => id(`option:${o}`))
+            : null,
+          select_all_label: g.selectAllLabel,
+          note: g.note,
+        });
         g.options.forEach((o, oi) =>
           options.push({
             id: id(`option:${o.id}`),
@@ -124,7 +173,7 @@ export async function resetDemo(slug: string | 'all'): Promise<{ shops: number }
             price_satang: t.priceSatang,
           });
         }
-      }
+      });
       for (const v of m.variants) {
         const optionIds = v.optionIds.map((o) => id(`option:${o}`)).sort();
         variants.push({
@@ -138,6 +187,8 @@ export async function resetDemo(slug: string | 'all'): Promise<{ shops: number }
     });
 
     check((await db.from('menus').upsert(menus, { onConflict: 'id' })).error, 'menus');
+    check((await db.from('menu_ingredients').insert(links)).error, 'links');
+    check((await db.from('option_groups').insert(groups)).error, 'groups');
     check((await db.from('options').upsert(options, { onConflict: 'id' })).error, 'options');
     check(
       (await db.from('menu_variants').upsert(variants, { onConflict: 'id' })).error,

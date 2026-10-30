@@ -860,6 +860,10 @@ export type Database = {
         };
         Returns: undefined;
       };
+      vendor_delete_menu: {
+        Args: { p_menu_id: string; p_shop_id: string };
+        Returns: string;
+      };
       vendor_recall_order: {
         Args: { p_order_id: string; p_shop_id: string };
         Returns: {
@@ -898,6 +902,10 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      vendor_save_menu: {
+        Args: { p_menu: Json; p_shop_id: string };
+        Returns: string;
       };
       vendor_set_order_status: {
         Args: {

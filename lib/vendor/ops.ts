@@ -3,6 +3,14 @@ import 'server-only';
 import { assertVendorOf, type Session } from '../auth-rules';
 import type { Database, Json } from '../database.types';
 import { loadShopBySlug } from '../menu/db';
+import {
+  canSell,
+  hasErrors,
+  parseMenuDraft,
+  syncVariants,
+  toSaveDocument,
+  validateStructure,
+} from '../menu/structure';
 import { buildOrder, type BuildError } from '../orders/build';
 import { notifyOrderReady } from '../push';
 import { createAdminClient } from '../supabase/admin';
@@ -334,4 +342,160 @@ export async function updateShopSettings(
 
   const { error } = await createAdminClient().from('shops').update(update).eq('id', shopId);
   return error ? { ok: false, error: 'bad_input' } : { ok: true };
+}
+
+// Menu structure (Phase 7) -----------------------------------------------------------------
+
+/**
+ * Saves a whole menu (add or edit): groups, options, ingredient links, tier prices and the
+ * variant grid. Structural errors are refused; a menu with missing prices or no way to order
+ * it is saved but forced off, so customers never see a menu they cannot order.
+ */
+export async function saveMenu(
+  s: Session,
+  shopId: string,
+  raw: unknown,
+): Promise<
+  | { ok: true; menuId: string; available: boolean; issues: string[] }
+  | { ok: false; error: 'bad_input' | 'invalid' | 'not_found' | 'failed'; issues?: string[] }
+> {
+  assertVendorOf(s, shopId);
+  const draft = parseMenuDraft(raw);
+  if (!draft) return { ok: false, error: 'bad_input' };
+
+  const db = createAdminClient();
+  const { data: ingredients } = await db.from('ingredients').select('id').eq('shop_id', shopId);
+  const hasVariants = draft.groups.some((g) => g.kind === 'variant');
+  // The grid always follows the variant groups, whatever the browser sent.
+  const menu = hasVariants ? syncVariants(draft) : { ...draft, variants: [] };
+  const issues = validateStructure(
+    menu,
+    (ingredients ?? []).map((i) => i.id),
+  );
+  if (hasErrors(issues)) {
+    return {
+      ok: false,
+      error: 'invalid',
+      issues: issues.filter((i) => i.severity === 'error').map((i) => i.message),
+    };
+  }
+
+  const available = menu.isAvailable && canSell(issues);
+  const { data, error } = await db.rpc('vendor_save_menu', {
+    p_shop_id: shopId,
+    p_menu: toSaveDocument({ ...menu, isAvailable: available }) as unknown as Json,
+  });
+  if (error || !data) {
+    console.error('saveMenu failed:', error?.message);
+    return {
+      ok: false,
+      error: /not in this shop/.test(error?.message ?? '') ? 'not_found' : 'failed',
+    };
+  }
+  await logEvent(db, s, shopId, 'menu_saved', { menu_id: data, available });
+  return { ok: true, menuId: data, available, issues: issues.map((i) => i.message) };
+}
+
+/** Soft delete when the menu has past orders (history keeps its menu), otherwise removed. */
+export async function deleteMenu(
+  s: Session,
+  shopId: string,
+  menuId: string,
+): Promise<{ ok: true; mode: 'soft' | 'hard' } | Fail<'not_found'>> {
+  assertVendorOf(s, shopId);
+  if (!isId(menuId)) return { ok: false, error: 'not_found' };
+  const { data, error } = await createAdminClient().rpc('vendor_delete_menu', {
+    p_shop_id: shopId,
+    p_menu_id: menuId,
+  });
+  if (error || (data !== 'soft' && data !== 'hard')) return { ok: false, error: 'not_found' };
+  return { ok: true, mode: data };
+}
+
+const cleanName = (v: unknown, max: number): string | null =>
+  typeof v === 'string' && v.trim().length >= 1 && [...v.trim()].length <= max ? v.trim() : null;
+
+export async function addIngredient(
+  s: Session,
+  shopId: string,
+  name: unknown,
+): Promise<{ ok: true; id: string } | Fail<'bad_input' | 'duplicate' | 'failed'>> {
+  assertVendorOf(s, shopId);
+  const n = cleanName(name, 40);
+  if (!n) return { ok: false, error: 'bad_input' };
+  const { data, error } = await createAdminClient()
+    .from('ingredients')
+    .insert({ shop_id: shopId, name: n })
+    .select('id')
+    .single();
+  if (error?.code === '23505') return { ok: false, error: 'duplicate' };
+  return error || !data ? { ok: false, error: 'failed' } : { ok: true, id: data.id };
+}
+
+export async function renameIngredient(
+  s: Session,
+  shopId: string,
+  ingredientId: string,
+  name: unknown,
+): Promise<{ ok: true } | Fail<'bad_input' | 'duplicate' | 'not_found'>> {
+  assertVendorOf(s, shopId);
+  const n = cleanName(name, 40);
+  if (!n) return { ok: false, error: 'bad_input' };
+  const { data, error } = await createAdminClient()
+    .from('ingredients')
+    .update({ name: n })
+    .eq('id', ingredientId)
+    .eq('shop_id', shopId)
+    .select('id');
+  if (error?.code === '23505') return { ok: false, error: 'duplicate' };
+  return data?.length ? { ok: true } : { ok: false, error: 'not_found' };
+}
+
+/** Deleting an ingredient unlinks it: options keep working without it, menus stop requiring it. */
+export async function deleteIngredient(
+  s: Session,
+  shopId: string,
+  ingredientId: string,
+): Promise<{ ok: true; unlinkedOptions: number; unlinkedMenus: number } | Fail<'not_found'>> {
+  assertVendorOf(s, shopId);
+  const db = createAdminClient();
+  const { data: own } = await db
+    .from('ingredients')
+    .select('id')
+    .eq('id', ingredientId)
+    .eq('shop_id', shopId)
+    .maybeSingle();
+  if (!own) return { ok: false, error: 'not_found' };
+  const { count: unlinkedOptions } = await db
+    .from('options')
+    .select('*', { count: 'exact', head: true })
+    .eq('ingredient_id', ingredientId);
+  const { count: unlinkedMenus } = await db
+    .from('menu_ingredients')
+    .select('*', { count: 'exact', head: true })
+    .eq('ingredient_id', ingredientId);
+  const { error } = await db.from('ingredients').delete().eq('id', ingredientId);
+  if (error) return { ok: false, error: 'not_found' };
+  return { ok: true, unlinkedOptions: unlinkedOptions ?? 0, unlinkedMenus: unlinkedMenus ?? 0 };
+}
+
+/** Categories are the menu category text; renaming changes every menu in that category. */
+export async function renameCategory(
+  s: Session,
+  shopId: string,
+  from: unknown,
+  to: unknown,
+): Promise<{ ok: true; menus: number } | Fail<'bad_input'>> {
+  assertVendorOf(s, shopId);
+  const a = cleanName(from, 40);
+  const b = cleanName(to, 40);
+  if (!a || !b) return { ok: false, error: 'bad_input' };
+  const { data } = await createAdminClient()
+    .from('menus')
+    .update({ category: b })
+    .eq('shop_id', shopId)
+    .eq('category', a)
+    .is('deleted_at', null)
+    .select('id');
+  return { ok: true, menus: data?.length ?? 0 };
 }

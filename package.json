@@ -18,7 +18,8 @@
     "check:phase4": "tsx --env-file=.env.local scripts/check-phase4.ts",
     "check:phase5": "tsx --conditions=react-server --env-file=.env.local scripts/check-phase5.ts",
     "check:phase6": "tsx --conditions=react-server --env-file=.env.local scripts/check-phase6.ts",
-    "test:e2e": "node --env-file=.env.local node_modules/@playwright/test/cli.js test"
+    "test:e2e": "node --env-file=.env.local node_modules/@playwright/test/cli.js test",
+    "check:phase7": "tsx --conditions=react-server --env-file=.env.local scripts/check-phase7.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

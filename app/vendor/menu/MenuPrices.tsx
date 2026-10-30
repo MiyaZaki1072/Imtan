@@ -1,10 +1,16 @@
 'use client';
 
+import Link from 'next/link';
 import { useId, useState } from 'react';
 import { btnPrimary, btnSecondary, cx } from '@/components/ui';
 import { formatBaht } from '@/lib/format';
 import type { Menu } from '@/lib/menu';
-import { actSavePrices, actSetMenuAvailable, actSetOptionAvailable } from '@/lib/vendor/actions';
+import {
+  actRenameCategory,
+  actSavePrices,
+  actSetMenuAvailable,
+  actSetOptionAvailable,
+} from '@/lib/vendor/actions';
 
 // Prices are typed in whole baht and saved as satang. Edits are kept per field and sent in
 // one batch by "บันทึกราคา". New prices apply to new orders; placed orders keep theirs.
@@ -100,6 +106,9 @@ function Toggle({
 
 export function MenuPrices({ shopId, menus: initial }: { shopId: string; menus: Menu[] }) {
   const [menus, setMenus] = useState(initial);
+  const [catFrom, setCatFrom] = useState('');
+  const [catTo, setCatTo] = useState('');
+  const categories = [...new Set(menus.map((m) => m.category))];
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
@@ -271,6 +280,55 @@ export function MenuPrices({ shopId, menus: initial }: { shopId: string; menus: 
 
   return (
     <>
+      <div className="mt-4 flex flex-wrap items-end gap-3">
+        <Link href="/vendor/menu/new" className={cx(btnPrimary, 'min-h-12')}>
+          + เพิ่มเมนูใหม่
+        </Link>
+        <form
+          className="flex flex-wrap items-end gap-2"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const from = catFrom || categories[0];
+            const to = catTo.trim();
+            if (!from || !to || to === from) return;
+            const r = await actRenameCategory(shopId, from, to).catch(() => null);
+            if (r?.ok) {
+              setMenus((ms) => ms.map((m) => (m.category === from ? { ...m, category: to } : m)));
+              setCatTo('');
+              setStatus({
+                ok: true,
+                text: `เปลี่ยนชื่อหมวด “${from}” เป็น “${to}” แล้ว (${r.menus} เมนู)`,
+              });
+            } else setStatus({ ok: false, text: 'เปลี่ยนชื่อหมวดไม่สำเร็จ' });
+          }}
+        >
+          <label className="block text-sm">
+            <span className="mb-1 block font-semibold">เปลี่ยนชื่อหมวด</span>
+            <select
+              value={catFrom || categories[0] || ''}
+              onChange={(e) => setCatFrom(e.target.value)}
+              className="min-h-12 rounded-xl border border-border bg-surface px-2"
+            >
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <input
+            aria-label="ชื่อหมวดใหม่"
+            placeholder="ชื่อใหม่"
+            maxLength={40}
+            value={catTo}
+            onChange={(e) => setCatTo(e.target.value)}
+            className="min-h-12 w-40 rounded-xl border border-border bg-surface px-3"
+          />
+          <button type="submit" className={cx(btnSecondary, 'min-h-12')}>
+            เปลี่ยน
+          </button>
+        </form>
+      </div>
       <ul className="mt-5 space-y-3">
         {menus.map((m) => {
           const variantGroups = m.groups.filter((g) => g.kind === 'variant');
@@ -290,12 +348,17 @@ export function MenuPrices({ shopId, menus: initial }: { shopId: string; menus: 
                   <h2 className="text-lg font-bold">{m.name}</h2>
                   <p className="text-xs text-muted">{m.category}</p>
                 </div>
-                <Toggle
-                  on={m.isAvailable}
-                  label={m.name}
-                  busy={busy === m.id}
-                  onChange={() => toggleMenu(m)}
-                />
+                <div className="flex items-center gap-2">
+                  <Link href={`/vendor/menu/${m.id}`} className={cx(btnSecondary, 'min-h-12')}>
+                    แก้โครงสร้าง
+                  </Link>
+                  <Toggle
+                    on={m.isAvailable}
+                    label={m.name}
+                    busy={busy === m.id}
+                    onChange={() => toggleMenu(m)}
+                  />
+                </div>
               </div>
 
               {m.basePriceSatang !== null && (

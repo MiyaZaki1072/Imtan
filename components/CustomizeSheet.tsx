@@ -26,12 +26,15 @@ export function CustomizeSheet({
   menu,
   ingredients,
   allowItemNote,
+  preview = false,
   onClose,
   onAdd,
 }: {
   menu: Menu;
   ingredients: IngredientMap;
   allowItemNote: boolean;
+  /** Vendor preview in the menu editor: shows the sheet as customers see it, records nothing. */
+  preview?: boolean;
   onClose: () => void;
   onAdd: (line: CartLine) => void;
 }) {
@@ -45,7 +48,9 @@ export function CustomizeSheet({
   const closeRef = useRef<HTMLButtonElement>(null);
 
   const menuId = menu.id;
-  useEffect(() => track('customize_opened', { menu: menuId }), [menuId]);
+  useEffect(() => {
+    if (!preview) track('customize_opened', { menu: menuId });
+  }, [menuId, preview]);
 
   useEffect(() => {
     closeRef.current?.focus();

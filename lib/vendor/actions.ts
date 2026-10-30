@@ -51,3 +51,27 @@ export async function actSavePrices(shopId: string, changes: unknown) {
 export async function actUpdateShopSettings(shopId: string, input: unknown) {
   return ops.updateShopSettings(await requireVendor(shopId), shopId, input);
 }
+
+export async function actSaveMenu(shopId: string, menu: unknown) {
+  return ops.saveMenu(await requireVendor(shopId), shopId, menu);
+}
+
+export async function actDeleteMenu(shopId: string, menuId: string) {
+  return ops.deleteMenu(await requireVendor(shopId), shopId, menuId);
+}
+
+export async function actAddIngredient(shopId: string, name: unknown) {
+  return ops.addIngredient(await requireVendor(shopId), shopId, name);
+}
+
+export async function actRenameIngredient(shopId: string, ingredientId: string, name: unknown) {
+  return ops.renameIngredient(await requireVendor(shopId), shopId, ingredientId, name);
+}
+
+export async function actDeleteIngredient(shopId: string, ingredientId: string) {
+  return ops.deleteIngredient(await requireVendor(shopId), shopId, ingredientId);
+}
+
+export async function actRenameCategory(shopId: string, from: unknown, to: unknown) {
+  return ops.renameCategory(await requireVendor(shopId), shopId, from, to);
+}

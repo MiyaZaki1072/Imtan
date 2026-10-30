@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { vendorPageShop } from '@/lib/auth';
 import { getShopFromDb } from '@/lib/shops';
+import { IngredientManager } from './IngredientManager';
 import { StockToggles } from './StockToggles';
 
 export default async function StockPage() {
@@ -25,6 +26,7 @@ export default async function StockPage() {
         กดเพื่อสลับ มี / หมด · ลูกค้าจะเลือกไม่ได้ทันทีในทุกเมนูที่ใช้วัตถุดิบนั้น
       </p>
       <StockToggles shopId={shop.id} ingredients={shop.ingredients} usage={usage} />
+      <IngredientManager shopId={shop.id} ingredients={shop.ingredients} usage={usage} />
     </main>
   );
 }
