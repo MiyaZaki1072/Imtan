@@ -9,6 +9,7 @@ import { VendorOrderCard } from '@/components/VendorOrderCard';
 import { btnPrimary, btnSecondary, cx } from '@/components/ui';
 import { playChime, useArmAudio, useWakeLock } from '@/lib/alert';
 import { waitMinutes } from '@/lib/format';
+import { actSimulateOrder } from '@/lib/admin/actions';
 import { useLiveData } from '@/lib/use-live-data';
 import {
   actAddQuickWalkIn,
@@ -66,7 +67,13 @@ function Modal({
   );
 }
 
-export function VendorBoard({ initial }: { initial: VendorBoardData }) {
+export function VendorBoard({
+  initial,
+  interview = false,
+}: {
+  initial: VendorBoardData;
+  interview?: boolean;
+}) {
   const shopId = initial.shopId;
   const {
     data: board,
@@ -156,6 +163,12 @@ export function VendorBoard({ initial }: { initial: VendorBoardData }) {
     }
   }
 
+  async function sampleOrder() {
+    const result = await actSimulateOrder(shopId).catch(() => ({ ok: false as const }));
+    setToast(result.ok ? 'สร้างออเดอร์ตัวอย่างแล้ว' : 'สร้างออเดอร์ตัวอย่างไม่สำเร็จ');
+    refresh();
+  }
+
   async function togglePause() {
     const result = await actUpdateShopSettings(shopId, { is_open: !board.isOpen });
     setToast(
@@ -170,6 +183,11 @@ export function VendorBoard({ initial }: { initial: VendorBoardData }) {
 
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-4 pb-10">
+      {interview && (
+        <p className="mb-3 rounded-xl bg-info-soft px-4 py-2.5 text-center text-sm font-semibold text-info-ink">
+          โหมดสาธิต — ออเดอร์ที่เห็นเป็นตัวอย่าง ไม่มีการตัดเงินจริง
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-3">
         <p className="mr-auto text-sm text-muted">
           รอทำ {board.itemsInQueue} จาน · ทำเสร็จเฉลี่ย {waitMinutes(board.secondsPerItem)} นาที/จาน
@@ -349,6 +367,16 @@ export function VendorBoard({ initial }: { initial: VendorBoardData }) {
             </button>
           </div>
         </Modal>
+      )}
+
+      {interview && (
+        <button
+          type="button"
+          onClick={sampleOrder}
+          className={cx(btnPrimary, 'fixed right-6 bottom-6 z-30 min-h-14 px-6 shadow-lg')}
+        >
+          สร้างออเดอร์ตัวอย่าง
+        </button>
       )}
 
       <p

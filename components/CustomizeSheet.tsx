@@ -15,6 +15,7 @@ import {
   type Menu,
   type Selections,
 } from '@/lib/menu';
+import { track } from '@/lib/track';
 import { XIcon } from './icons';
 import { OptionGroup } from './OptionGroup';
 import { Stepper } from './Stepper';
@@ -42,6 +43,9 @@ export function CustomizeSheet({
   const titleId = useId();
   const noteId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
+
+  const menuId = menu.id;
+  useEffect(() => track('customize_opened', { menu: menuId }), [menuId]);
 
   useEffect(() => {
     closeRef.current?.focus();

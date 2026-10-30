@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from 'react';
 import { playChime } from '@/lib/alert';
+import { track } from '@/lib/track';
 import { CheckIcon } from './icons';
 import { btnLarge, cx } from './ui';
 
@@ -36,6 +37,7 @@ export function ReadyAlert({
       // Vibration is optional.
     }
     playChime();
+    track('alert_shown', { label });
     const original = document.title;
     let on = false;
     const timer = window.setInterval(() => {

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { CartLine } from '@/components/CartLine';
 import { AlertIcon } from '@/components/icons';
 import { btnLarge, btnPrimary, btnSecondary, cx, input } from '@/components/ui';
@@ -19,6 +19,7 @@ import {
 } from '@/lib/menu';
 import type { LoadedShop } from '@/lib/menu/db';
 import { placeOrder, type PlaceOrderError } from '@/lib/orders/actions';
+import { track } from '@/lib/track';
 import { useLiveShop } from '@/lib/use-live-shop';
 
 const ORDER_ERRORS: Record<PlaceOrderError, string> = {
@@ -38,6 +39,8 @@ export function CartView({ initial }: { initial: LoadedShop }) {
   const router = useRouter();
   const { shop } = useLiveShop(initial).data;
   const [placing, setPlacing] = useState(false);
+  const cartSlug = initial.shop.slug;
+  useEffect(() => track('cart_opened', { shop: cartSlug }), [cartSlug]);
   const [orderError, setOrderError] = useState<string | null>(null);
   const { cart, setQty, setAllergyNote } = useCart(shop.slug);
 

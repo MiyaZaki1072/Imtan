@@ -11,6 +11,7 @@ import { useCart } from '@/lib/cart-store';
 import { abandonOrder, demoPay } from '@/lib/orders/actions';
 import type { OrderViewData } from '@/lib/orders/types';
 import { secondsUntil } from '@/lib/orders/wait';
+import { track } from '@/lib/track';
 import { useLiveData } from '@/lib/use-live-data';
 
 const VERIFY_MS = 2000;
@@ -26,6 +27,8 @@ export function PayView({ initial }: { initial: OrderViewData }) {
   );
   const { clear } = useCart(o.shopSlug);
   const [verifying, setVerifying] = useState(false);
+  const orderId = initial.id;
+  useEffect(() => track('pay_viewed', { order: orderId }), [orderId]);
   const [leaving, setLeaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 

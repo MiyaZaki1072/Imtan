@@ -4,6 +4,7 @@ import { assertVendorOf, type Session } from '../auth-rules';
 import type { Database, Json } from '../database.types';
 import { loadShopBySlug } from '../menu/db';
 import { buildOrder, type BuildError } from '../orders/build';
+import { notifyOrderReady } from '../push';
 import { createAdminClient } from '../supabase/admin';
 
 // Every vendor write lives here. Each function takes the session and re-checks that the
@@ -44,7 +45,10 @@ export async function setOrderStatus(
     p_status: status as VendorStatus,
     p_reason: reason ? reason.slice(0, 200) : undefined,
   });
-  return error ? { ok: false, error: 'invalid_transition' } : { ok: true };
+  if (error) return { ok: false, error: 'invalid_transition' };
+  // The in-page alert is the main one; a failed push never fails the status change.
+  if (status === 'ready') await notifyOrderReady(orderId, false);
+  return { ok: true };
 }
 
 /** เรียกซ้ำ: the customer's ready alert plays again. */
@@ -58,7 +62,9 @@ export async function recallOrder(
     p_shop_id: shopId,
     p_order_id: orderId,
   });
-  return error ? { ok: false, error: 'not_ready' } : { ok: true };
+  if (error) return { ok: false, error: 'not_ready' };
+  await notifyOrderReady(orderId, true);
+  return { ok: true };
 }
 
 /** "+1 คิวหน้าร้าน": no menu, just a number and a dish count. */

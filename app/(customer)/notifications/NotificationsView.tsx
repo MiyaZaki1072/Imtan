@@ -5,20 +5,54 @@ import { useState } from 'react';
 import { BackLink } from '@/components/BackLink';
 import { BellIcon } from '@/components/icons';
 import { btnLarge, btnPrimary, btnSecondary, card, cx } from '@/components/ui';
+import { track } from '@/lib/track';
 
-type Result = 'granted' | 'denied' | 'unsupported' | null;
+type Result = 'granted' | 'denied' | 'unsupported' | 'failed' | null;
+
+function keyToBytes(base64Url: string): Uint8Array<ArrayBuffer> {
+  const pad = '='.repeat((4 - (base64Url.length % 4)) % 4);
+  const raw = atob((base64Url + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
 
 export function NotificationsView() {
   const [result, setResult] = useState<Result>(null);
 
   async function allow() {
-    if (typeof Notification === 'undefined') {
+    if (
+      typeof Notification === 'undefined' ||
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window)
+    ) {
       setResult('unsupported');
+      track('notif_permission', { result: 'unsupported' });
       return;
     }
-    // Phase 6 also subscribes to Web Push here.
     const permission = await Notification.requestPermission();
-    setResult(permission === 'granted' ? 'granted' : 'denied');
+    track('notif_permission', { result: permission });
+    if (permission !== 'granted') {
+      setResult('denied');
+      return;
+    }
+    try {
+      // Web Push: the browser subscribes with our public key; the server stores it.
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+      const subscription =
+        (await registration.pushManager.getSubscription()) ??
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: keyToBytes(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''),
+        }));
+      const res = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription.toJSON()),
+      });
+      setResult(res.ok ? 'granted' : 'failed');
+    } catch {
+      setResult('failed');
+    }
   }
 
   const queueHref = '/orders';
@@ -48,6 +82,11 @@ export function NotificationsView() {
           {result === 'denied' && (
             <span className="text-danger">
               ไม่ได้รับอนุญาต — เปิดหน้าคิวไว้เพื่อดูเมื่ออาหารพร้อม
+            </span>
+          )}
+          {result === 'failed' && (
+            <span className="text-warning">
+              เปิดการแจ้งเตือนไม่สำเร็จ — เปิดหน้าคิวไว้เพื่อดูเมื่ออาหารพร้อม
             </span>
           )}
           {result === 'unsupported' && (

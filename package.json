@@ -16,22 +16,29 @@
     "db:types": "supabase gen types typescript --project-id zfjndhmggindrhofueax --schema public > lib/database.types.ts",
     "check:phase3": "tsx --env-file=.env.local scripts/check-phase3.ts",
     "check:phase4": "tsx --env-file=.env.local scripts/check-phase4.ts",
-    "check:phase5": "tsx --conditions=react-server --env-file=.env.local scripts/check-phase5.ts"
+    "check:phase5": "tsx --conditions=react-server --env-file=.env.local scripts/check-phase5.ts",
+    "check:phase6": "tsx --conditions=react-server --env-file=.env.local scripts/check-phase6.ts",
+    "test:e2e": "node --env-file=.env.local node_modules/@playwright/test/cli.js test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
     "next": "16.4.3",
+    "qrcode": "^1.5.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
+    "web-push": "^3.6.7",
     "yaml": "^2.9.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^24.19.2",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "eslint-config-prettier": "^10.1.8",

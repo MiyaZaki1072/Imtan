@@ -38,31 +38,33 @@ async function AdminPageContent() {
           <p className="mt-1 text-sm text-muted">
             ยกเลิกออเดอร์ที่ค้าง ล้างเลขคิววันนี้ คืนของหมดและราคาตามข้อมูลตั้งต้น
           </p>
-          <button
-            type="button"
-            disabled
+          <Link
+            href="/demo"
             className={cx(btnSecondary, 'mt-4 min-h-12 border-danger/40 text-danger')}
           >
-            รีเซ็ตทุกร้าน
-          </button>
+            ไปที่เครื่องมือรีเซ็ต
+          </Link>
         </section>
 
         <section className={cx(card, 'px-5 py-5')}>
           <h2 className="text-lg font-bold">ส่งออก CSV</h2>
           <p className="mt-1 text-sm text-muted">ไฟล์ UTF-8 เปิดภาษาไทยใน Sheets/Excel ได้</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" disabled className={cx(btnSecondary, 'min-h-12')}>
+            <a href="/api/admin/export?type=events" className={cx(btnSecondary, 'min-h-12')}>
               เหตุการณ์ (events)
-            </button>
-            <button type="button" disabled className={cx(btnSecondary, 'min-h-12')}>
+            </a>
+            <a href="/api/admin/export?type=orders" className={cx(btnSecondary, 'min-h-12')}>
               ออเดอร์
-            </button>
+            </a>
           </div>
         </section>
 
         <section className={cx(card, 'px-5 py-5')}>
           <h2 className="text-lg font-bold">โปสเตอร์ QR หน้าร้าน</h2>
           <p className="mt-1 text-sm text-muted">QR เป็นลิงก์ธรรมดา สแกนด้วยกล้องมือถือได้</p>
+          <Link href="/admin/posters" className={cx(btnPrimary, 'mt-3 min-h-12')}>
+            เปิดโปสเตอร์ A5
+          </Link>
           <ul className="mt-3 space-y-1.5 text-sm">
             {shops.map((s) => (
               <li key={s.slug} className="flex items-center justify-between gap-2">
@@ -75,7 +77,6 @@ async function AdminPageContent() {
           </ul>
         </section>
       </div>
-      <p className="mt-4 text-xs text-muted">ปุ่มที่กดไม่ได้จะใช้งานได้เมื่อเชื่อมฐานข้อมูลแล้ว</p>
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
 import { assertAdmin, assertSignedIn, assertVendorOf, type Session } from './auth-rules';
@@ -11,8 +12,9 @@ import { createClient } from './supabase/server';
 
 export { AuthError, type Role, type Session } from './auth-rules';
 
-/** Admins see this shop on vendor screens until the demo shop picker exists (Phase 6). */
+/** Admins see this shop on vendor screens until they pick another on /demo. */
 const ADMIN_DEFAULT_SHOP = 'jae-buek';
+const ADMIN_SHOP_COOKIE = 'imtan_admin_shop';
 
 /** The verified session for this request, or null. Cached per request. */
 export const getSession = cache(async (): Promise<Session | null> => {
@@ -54,7 +56,9 @@ export const vendorPageShop = cache(async (): Promise<{ shopId: string; slug: st
   if (!s || (s.role !== 'vendor' && s.role !== 'admin')) redirect('/login?next=/vendor');
   const query = createAdminClient().from('shops').select('id, slug');
   const { data } = await (
-    s.role === 'admin' ? query.eq('slug', ADMIN_DEFAULT_SHOP) : query.eq('id', s.shopId ?? '')
+    s.role === 'admin'
+      ? query.eq('slug', (await cookies()).get(ADMIN_SHOP_COOKIE)?.value ?? ADMIN_DEFAULT_SHOP)
+      : query.eq('id', s.shopId ?? '')
   ).maybeSingle();
   if (!data) redirect('/login');
   return { shopId: data.id, slug: data.slug };

@@ -9,6 +9,7 @@ const plexThai = IBM_Plex_Sans_Thai({
 });
 
 export const metadata: Metadata = {
+  icons: { apple: '/icons/apple-180.png' },
   title: 'อิ่มทัน',
   description:
     'ดูคิวทุกร้าน สั่งอาหาร และรับแจ้งเตือนเมื่ออาหารพร้อม · โรงอาหารคณะวิศวกรรมศาสตร์ จุฬาฯ',

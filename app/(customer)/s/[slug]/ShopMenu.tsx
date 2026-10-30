@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { BackLink } from '@/components/BackLink';
 import { CustomizeSheet } from '@/components/CustomizeSheet';
 import { CartIcon } from '@/components/icons';
@@ -20,6 +20,7 @@ import {
   type CartLine,
 } from '@/lib/menu';
 import type { LoadedShop } from '@/lib/menu/db';
+import { track } from '@/lib/track';
 import { useLiveShop } from '@/lib/use-live-shop';
 
 const BUSY_SOFT = {
@@ -34,6 +35,8 @@ export function ShopMenu({ initial }: { initial: LoadedShop }) {
   const params = useSearchParams();
   const { data, offline } = useLiveShop(initial);
   const { shop, stats } = data;
+  const shopSlug = shop.slug;
+  useEffect(() => track('shop_viewed', { shop: shopSlug }), [shopSlug]);
   const { cart, add } = useCart(shop.slug);
   const ingredients = useMemo(() => ingredientMap(shop.ingredients), [shop.ingredients]);
 

@@ -599,6 +599,7 @@ export type Database = {
         Row: {
           allow_allergy_note: boolean;
           allow_item_note: boolean;
+          auto_advance: boolean;
           busy_level: string;
           category: string;
           est_wait_seconds: number;
@@ -617,6 +618,7 @@ export type Database = {
         Insert: {
           allow_allergy_note?: boolean;
           allow_item_note?: boolean;
+          auto_advance?: boolean;
           busy_level?: string;
           category: string;
           est_wait_seconds?: number;
@@ -635,6 +637,7 @@ export type Database = {
         Update: {
           allow_allergy_note?: boolean;
           allow_item_note?: boolean;
+          auto_advance?: boolean;
           busy_level?: string;
           category?: string;
           est_wait_seconds?: number;
@@ -697,6 +700,7 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      advance_simulated_orders: { Args: never; Returns: undefined };
       assign_queue_number: { Args: { p_shop_id: string }; Returns: number };
       confirm_payment: {
         Args: {
