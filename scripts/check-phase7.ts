@@ -108,7 +108,10 @@ async function main() {
   // 2. Fill the grid → available and orderable at the right price.
   const priced: Menu = {
     ...draft,
-    variants: saved1!.variants.map((v, i) => ({ ...v, priceSatang: i === 0 ? 5000 : 6000 })),
+    variants: saved1!.variants.map((v) => ({
+      ...v,
+      priceSatang: v.optionIds.includes(size.options[0].id) ? 5000 : 6000,
+    })),
   };
   const second = await ops.saveMenu(vendorA, A, priced);
   const live = await reload();
