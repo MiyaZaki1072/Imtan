@@ -2,6 +2,7 @@
 
 import { useId, useState } from 'react';
 import { btnPrimary, card, cx, input, label } from '@/components/ui';
+import { actUpdateShopSettings } from '@/lib/vendor/actions';
 
 // Exactly the vendor-editable whitelist from PLAN.md §4b.
 export interface ShopSettings {
@@ -37,12 +38,12 @@ function Check({
   );
 }
 
-export function SettingsForm({ initial }: { initial: ShopSettings }) {
+export function SettingsForm({ shopId, initial }: { shopId: string; initial: ShopSettings }) {
   const [s, setS] = useState(initial);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const ids = { name: useId(), category: useId(), prefix: useId(), minutes: useId() };
   const update = (patch: Partial<ShopSettings>) => {
-    setSaved(false);
+    setSaved('idle');
     setS((x) => ({ ...x, ...patch }));
   };
   const prefixOk = [...s.queuePrefix.trim()].length >= 1 && [...s.queuePrefix.trim()].length <= 8;
@@ -50,9 +51,22 @@ export function SettingsForm({ initial }: { initial: ShopSettings }) {
   return (
     <form
       className="mt-5 space-y-4"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        if (prefixOk) setSaved(true);
+        if (!prefixOk) return;
+        setSaved('saving');
+        // Exactly the whitelisted fields; the server ignores anything else.
+        const result = await actUpdateShopSettings(shopId, {
+          name: s.name,
+          category: s.category,
+          queue_prefix: s.queuePrefix,
+          is_open: s.isOpen,
+          wait_mode: s.waitMode,
+          manual_seconds_per_item: s.manualSecondsPerItem,
+          allow_item_note: s.allowItemNote,
+          allow_allergy_note: s.allowAllergyNote,
+        }).catch(() => ({ ok: false }));
+        setSaved(result.ok ? 'saved' : 'error');
       }}
     >
       <section className={cx(card, 'space-y-4 px-4 py-4')}>
@@ -173,9 +187,14 @@ export function SettingsForm({ initial }: { initial: ShopSettings }) {
 
       <div className="flex items-center justify-end gap-3">
         <p className="text-sm text-muted" role="status">
-          {saved ? 'ต้นแบบ: ยังไม่บันทึกจริงจนกว่าจะเชื่อมฐานข้อมูล' : ''}
+          {saved === 'saved' && 'บันทึกแล้ว'}
+          {saved === 'error' && 'บันทึกไม่สำเร็จ ตรวจข้อมูลแล้วลองใหม่'}
         </p>
-        <button type="submit" disabled={!prefixOk} className={cx(btnPrimary, 'min-h-12')}>
+        <button
+          type="submit"
+          disabled={!prefixOk || saved === 'saving'}
+          className={cx(btnPrimary, 'min-h-12')}
+        >
           บันทึก
         </button>
       </div>

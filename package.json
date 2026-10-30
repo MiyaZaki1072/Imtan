@@ -15,7 +15,8 @@
     "check:phase2": "tsx --env-file=.env.local scripts/check-phase2.ts",
     "db:types": "supabase gen types typescript --project-id zfjndhmggindrhofueax --schema public > lib/database.types.ts",
     "check:phase3": "tsx --env-file=.env.local scripts/check-phase3.ts",
-    "check:phase4": "tsx --env-file=.env.local scripts/check-phase4.ts"
+    "check:phase4": "tsx --env-file=.env.local scripts/check-phase4.ts",
+    "check:phase5": "tsx --conditions=react-server --env-file=.env.local scripts/check-phase5.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

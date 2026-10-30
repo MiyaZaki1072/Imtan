@@ -6,6 +6,7 @@ import { OptionGroup } from '@/components/OptionGroup';
 import { Stepper } from '@/components/Stepper';
 import { btnPrimary, btnSecondary, cx, input } from '@/components/ui';
 import { formatBaht } from '@/lib/format';
+import { actAddWalkInOrder } from '@/lib/vendor/actions';
 import {
   defaultSelections,
   ingredientMap,
@@ -29,7 +30,9 @@ export function WalkInForm({ shop }: { shop: Shop }) {
   const [selections, setSelections] = useState<Selections>({});
   const [qty, setQty] = useState(1);
   const [name, setName] = useState('');
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState<{ label: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const nameId = useId();
 
   const menu = menus.find((m) => m.id === menuId) ?? null;
@@ -44,15 +47,31 @@ export function WalkInForm({ shop }: { shop: Shop }) {
     setQty(1);
   }
 
+  async function submit() {
+    if (!menu || !result?.ok) return;
+    setSaving(true);
+    setError(null);
+    // The server reloads the menu and prices the order itself, like the customer app.
+    const res = await actAddWalkInOrder(
+      shop.id,
+      [{ menuId: menu.id, selections: result.selections, qty, note: '' }],
+      name,
+    ).catch(() => null);
+    setSaving(false);
+    if (res?.ok) setDone({ label: res.label });
+    else setError('เพิ่มเข้าคิวไม่สำเร็จ (ของอาจหมดหรือเมนูเปลี่ยน) ลองใหม่อีกครั้ง');
+  }
+
   if (done && menu && result?.ok) {
     return (
       <section className="w-full max-w-2xl rounded-3xl bg-surface p-6 text-center">
-        <h1 className="text-xl font-bold">เพิ่มเข้าคิวแล้ว (ตัวอย่าง)</h1>
+        <h1 className="text-xl font-bold">เพิ่มเข้าคิวแล้ว</h1>
+        <p className="my-3 text-6xl leading-[1.35] font-bold text-primary">{done.label}</p>
         <p className="mt-2 text-muted">
           {kitchenSummary(menu, result.selections)} × {qty}
         </p>
         <p className="mt-1 text-sm text-muted">
-          เลขคิวจริงออกจากระบบเมื่อเชื่อมฐานข้อมูล บอกลูกค้าให้รอฟังเรียกเลข
+          บอกลูกค้าให้รอฟังเรียกเลขนี้ · เก็บเงินสด {unit === null ? '' : formatBaht(unit * qty)}
         </p>
         <Link href="/vendor" className={cx(btnPrimary, 'mt-5 min-h-12 w-full')}>
           กลับกระดานออเดอร์
@@ -136,14 +155,22 @@ export function WalkInForm({ shop }: { shop: Shop }) {
         </p>
       </div>
 
+      {error && (
+        <p
+          role="alert"
+          className="mt-4 rounded-xl bg-danger-soft px-4 py-3 text-sm font-semibold text-danger"
+        >
+          {error}
+        </p>
+      )}
       <div className="mt-5 grid grid-cols-2 gap-3">
         <Link href="/vendor" className={cx(btnSecondary, 'min-h-12')}>
           ยกเลิก
         </Link>
         <button
           type="button"
-          disabled={!result?.ok || unit === null}
-          onClick={() => setDone(true)}
+          disabled={!result?.ok || unit === null || saving}
+          onClick={submit}
           className={cx(btnPrimary, 'min-h-12')}
         >
           เพิ่มเข้าคิว

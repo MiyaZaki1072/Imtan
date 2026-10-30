@@ -1,11 +1,13 @@
 import { notFound } from 'next/navigation';
-import { getShop } from '@/lib/demo-data/load';
-import { vendorPageShopSlug } from '@/lib/auth';
+import { vendorPageShop } from '@/lib/auth';
+import { getShopFromDb } from '@/lib/shops';
 import { StockToggles } from './StockToggles';
 
 export default async function StockPage() {
-  const shop = getShop(await vendorPageShopSlug());
-  if (!shop) notFound();
+  const { slug } = await vendorPageShop();
+  const loaded = await getShopFromDb(slug);
+  if (!loaded) notFound();
+  const { shop } = loaded;
   const usage = Object.fromEntries(
     shop.ingredients.map((i) => [
       i.id,
@@ -22,7 +24,7 @@ export default async function StockPage() {
       <p className="mt-1 text-muted">
         กดเพื่อสลับ มี / หมด · ลูกค้าจะเลือกไม่ได้ทันทีในทุกเมนูที่ใช้วัตถุดิบนั้น
       </p>
-      <StockToggles ingredients={shop.ingredients} usage={usage} />
+      <StockToggles shopId={shop.id} ingredients={shop.ingredients} usage={usage} />
     </main>
   );
 }

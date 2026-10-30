@@ -1,10 +1,10 @@
 'use client';
 
 import { formatClock } from '@/lib/format';
-import type { SampleOrder } from '@/lib/sample';
+import type { VendorOrder } from '@/lib/vendor/types';
 import { btnSecondary, btnSuccess, btnWarning, cx } from './ui';
 
-const SOURCE: Record<SampleOrder['source'], string> = {
+const SOURCE: Record<VendorOrder['source'], string> = {
   app: 'สั่งผ่านแอป',
   walk_in_quick: 'หน้าร้าน',
   walk_in_full: 'หน้าร้าน',
@@ -31,14 +31,17 @@ const vendorBtn = 'min-h-12 w-full';
 export function VendorOrderCard({
   order,
   minutesSinceReady,
+  busy,
   onStart,
   onReady,
   onPickedUp,
   onRecall,
   onCancel,
 }: {
-  order: SampleOrder;
+  order: VendorOrder;
   minutesSinceReady: number | null;
+  /** An action for this order is running: buttons wait so a double tap can't fire twice. */
+  busy?: boolean;
   onStart: () => void;
   onReady: () => void;
   onPickedUp: () => void;
@@ -100,12 +103,18 @@ export function VendorOrderCard({
         {order.status === 'queued' && (
           // "เสร็จแล้ว" is allowed straight from รอทำ (vendors may skip "เริ่มทำ").
           <div className="grid grid-cols-[3fr_2fr] gap-2">
-            <button type="button" onClick={onStart} className={cx(btnWarning, vendorBtn)}>
+            <button
+              type="button"
+              onClick={onStart}
+              disabled={busy}
+              className={cx(btnWarning, vendorBtn)}
+            >
               เริ่มทำ
             </button>
             <button
               type="button"
               onClick={onReady}
+              disabled={busy}
               className={cx(
                 btnSecondary,
                 vendorBtn,
@@ -117,7 +126,12 @@ export function VendorOrderCard({
           </div>
         )}
         {order.status === 'cooking' && (
-          <button type="button" onClick={onReady} className={cx(btnSuccess, vendorBtn)}>
+          <button
+            type="button"
+            onClick={onReady}
+            disabled={busy}
+            className={cx(btnSuccess, vendorBtn)}
+          >
             เสร็จแล้ว – แจ้งลูกค้า
           </button>
         )}
@@ -126,6 +140,7 @@ export function VendorOrderCard({
             <button
               type="button"
               onClick={onPickedUp}
+              disabled={busy}
               className={cx(
                 btnSecondary,
                 vendorBtn,
@@ -137,6 +152,7 @@ export function VendorOrderCard({
             <button
               type="button"
               onClick={onRecall}
+              disabled={busy}
               className={cx(btnSecondary, vendorBtn, 'px-2! whitespace-nowrap')}
             >
               เรียกซ้ำ
@@ -147,6 +163,7 @@ export function VendorOrderCard({
           <button
             type="button"
             onClick={onCancel}
+            disabled={busy}
             className="ml-auto flex min-h-12 w-fit items-center rounded-xl px-3 text-sm font-semibold text-danger hover:bg-danger-soft"
           >
             ยกเลิก + คืนเงิน

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { signOut } from '@/app/login/actions';
-import { getSession, vendorPageShopSlug } from '@/lib/auth';
-import { getShop } from '@/lib/demo-data/load';
+import { getSession, vendorPageShop } from '@/lib/auth';
+import { getShopFromDb } from '@/lib/shops';
 
 // Vendor screens target a 1024 px tablet and still work on a phone.
 const NAV = [
@@ -16,9 +16,9 @@ const navLink =
 
 /** Header for the signed-in vendor's shop. Redirects to /login when not a vendor or admin. */
 export async function VendorShell({ children }: { children: React.ReactNode }) {
-  const slug = await vendorPageShopSlug();
+  const { slug } = await vendorPageShop();
   const session = await getSession();
-  const shop = getShop(slug);
+  const shop = (await getShopFromDb(slug))?.shop;
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border bg-surface">

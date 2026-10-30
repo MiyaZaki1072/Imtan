@@ -46,16 +46,26 @@ export function WelcomeForm() {
     const supabase = getBrowserClient();
     // Signed in from the browser so Supabase's per-IP limit counts each phone, not the server.
     const { data } = await supabase.auth.getSession();
-    const result = data.session
-      ? // Renaming is the one client write allowed (column grant on display_name).
-        await supabase
-          .from('profiles')
-          .update({ display_name: trimmed })
-          .eq('id', data.session.user.id)
-          .then(async (r) =>
-            r.error ? r : await supabase.auth.updateUser({ data: { display_name: trimmed } }),
-          )
-      : await supabase.auth.signInAnonymously({ options: { data: { display_name: trimmed } } });
+    let error: unknown = null;
+    if (data.session) {
+      // Renaming is the one client write allowed (column grant on display_name).
+      const renamed = await supabase
+        .from('profiles')
+        .update({ display_name: trimmed })
+        .eq('id', data.session.user.id)
+        .select('id');
+      error = renamed.error ?? (renamed.data?.length ? null : 'no profile');
+      if (!error)
+        error = (await supabase.auth.updateUser({ data: { display_name: trimmed } })).error;
+    }
+    if (!data.session || error) {
+      // No session, or a stale one (its user no longer exists): start a fresh guest session.
+      if (data.session) await supabase.auth.signOut();
+      error = (
+        await supabase.auth.signInAnonymously({ options: { data: { display_name: trimmed } } })
+      ).error;
+    }
+    const result = { error };
     if (result.error) {
       setBusy(false);
       setError('เข้าใช้งานไม่สำเร็จ ลองใหม่อีกครั้ง');

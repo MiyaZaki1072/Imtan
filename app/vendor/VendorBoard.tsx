@@ -2,14 +2,23 @@
 
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { PauseIcon, PlusIcon } from '@/components/icons';
 import { Stepper } from '@/components/Stepper';
 import { VendorOrderCard } from '@/components/VendorOrderCard';
 import { btnPrimary, btnSecondary, cx } from '@/components/ui';
-import { queueLabel, waitMinutes } from '@/lib/format';
-import type { SampleOrder, SampleStatus } from '@/lib/sample';
+import { playChime, useArmAudio, useWakeLock } from '@/lib/alert';
+import { waitMinutes } from '@/lib/format';
+import { useLiveData } from '@/lib/use-live-data';
+import {
+  actAddQuickWalkIn,
+  actRecallOrder,
+  actSetOrderStatus,
+  actUpdateShopSettings,
+} from '@/lib/vendor/actions';
+import type { VendorBoardData, VendorOrder, VendorOrderStatus } from '@/lib/vendor/types';
 
-const COLUMNS: { status: SampleStatus; title: string; badge: string }[] = [
+const COLUMNS: { status: VendorOrderStatus; title: string; badge: string }[] = [
   { status: 'queued', title: 'รอทำ', badge: 'bg-bg text-ink' },
   { status: 'cooking', title: 'กำลังทำ', badge: 'bg-warning-soft text-warning' },
   { status: 'ready', title: 'พร้อมรับ (แจ้งแล้ว)', badge: 'bg-success-soft text-success' },
@@ -57,26 +66,44 @@ function Modal({
   );
 }
 
-export function VendorBoard({
-  prefix,
-  secondsPerItem,
-  waitMode,
-  initialOrders,
-  now,
-}: {
-  prefix: string;
-  secondsPerItem: number;
-  waitMode: 'auto' | 'manual';
-  initialOrders: SampleOrder[];
-  now: string;
-}) {
-  // Phase 1: actions change local sample state. Phase 5 calls vendor_* server actions.
-  const [orders, setOrders] = useState(initialOrders);
-  const [paused, setPaused] = useState(false);
+export function VendorBoard({ initial }: { initial: VendorBoardData }) {
+  const shopId = initial.shopId;
+  const {
+    data: board,
+    offline,
+    fetchedAt,
+    refresh,
+  } = useLiveData(
+    `/api/vendor/board?shopId=${shopId}`,
+    initial,
+    [
+      { table: 'orders', filter: `shop_id=eq.${shopId}` },
+      { table: 'shops', filter: `id=eq.${shopId}` },
+    ],
+    `vendor:${shopId}`,
+    10000,
+  );
+
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [walkIn, setWalkIn] = useState<{ dishes: number; added: string | null } | null>(null);
-  const [cancelling, setCancelling] = useState<SampleOrder | null>(null);
+  const [cancelling, setCancelling] = useState<VendorOrder | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const nowMs = new Date(now).getTime();
+
+  useArmAudio();
+  useWakeLock(true);
+
+  // A chime for each new order that arrives after the board opened.
+  const seen = useRef(new Set(initial.orders.map((o) => o.id)));
+  useEffect(() => {
+    let fresh = false;
+    for (const o of board.orders) {
+      if (!seen.current.has(o.id)) {
+        seen.current.add(o.id);
+        if (o.source === 'app') fresh = true;
+      }
+    }
+    if (fresh) playChime();
+  }, [board.orders]);
 
   useEffect(() => {
     if (!toast) return;
@@ -84,16 +111,31 @@ export function VendorBoard({
     return () => window.clearTimeout(t);
   }, [toast]);
 
-  const set = (id: string, status: SampleStatus, patch: Partial<SampleOrder> = {}) =>
-    setOrders((os) => os.map((o) => (o.id === id ? { ...o, status, ...patch } : o)));
+  // Server time, advanced by the device clock between fetches.
+  const [nowMs, setNowMs] = useState<number | null>(null);
+  useEffect(() => {
+    const t = window.setInterval(() => setNowMs(Date.now()), 20_000);
+    return () => window.clearInterval(t);
+  }, []);
+  const serverNow =
+    Date.parse(board.serverNow) + (nowMs === null ? 0 : Math.max(0, nowMs - fetchedAt));
 
-  const open = orders.filter((o) => o.status !== 'picked_up');
-  const waiting = open.filter((o) => o.status === 'queued' || o.status === 'cooking');
-  const dishes = waiting.reduce((n, o) => n + o.itemCount, 0);
+  async function run(order: VendorOrder, fn: () => Promise<{ ok: boolean }>, done?: string) {
+    setBusyId(order.id);
+    try {
+      const result = await fn();
+      if (done && result.ok) setToast(done);
+      if (!result.ok) setToast('ทำรายการไม่ได้ ออเดอร์อาจเปลี่ยนไปแล้ว');
+    } catch {
+      setToast('ทำรายการไม่ได้ ลองใหม่อีกครั้ง');
+    }
+    refresh();
+    setBusyId(null);
+  }
 
-  // "รวมเมนูซ้ำ": identical kitchen summaries waiting in รอทำ.
+  const orders = board.orders;
   const repeats = new Map<string, { qty: number; labels: string[] }>();
-  for (const o of open.filter((x) => x.status === 'queued')) {
+  for (const o of orders.filter((x) => x.status === 'queued')) {
     for (const it of o.items) {
       const r = repeats.get(it.kitchenSummary) ?? { qty: 0, labels: [] };
       r.qty += it.qty;
@@ -103,39 +145,35 @@ export function VendorBoard({
   }
   const repeatRows = [...repeats.entries()].filter(([, r]) => r.labels.length > 1);
 
-  function addWalkIn() {
+  async function addWalkIn() {
     if (!walkIn) return;
-    // Sample only. Phase 5: add_quick_walk_in() assigns the real number in SQL.
-    const queueNo = Math.max(0, ...orders.map((o) => o.queueNo)) + 1;
-    const label = queueLabel(prefix, queueNo);
-    setOrders((os) => [
-      ...os,
-      {
-        id: `walk-in-${queueNo}`,
-        queueNo,
-        queueLabel: label,
-        customerName: 'ลูกค้าหน้าร้าน',
-        source: 'walk_in_quick',
-        status: 'queued',
-        itemCount: walkIn.dishes,
-        totalSatang: null,
-        allergyNote: null,
-        items: [],
-        queuedAt: now,
-        startedAt: null,
-        readyAt: null,
-        pickedUpAt: null,
-      },
-    ]);
-    setWalkIn({ ...walkIn, added: label });
+    const result = await actAddQuickWalkIn(shopId, walkIn.dishes);
+    if (result.ok) {
+      setWalkIn({ ...walkIn, added: result.label });
+      refresh();
+    } else {
+      setToast('เพิ่มคิวไม่สำเร็จ ลองใหม่อีกครั้ง');
+    }
+  }
+
+  async function togglePause() {
+    const result = await actUpdateShopSettings(shopId, { is_open: !board.isOpen });
+    setToast(
+      result.ok
+        ? board.isOpen
+          ? 'ปิดรับออเดอร์ใหม่แล้ว'
+          : 'เปิดรับออเดอร์แล้ว'
+        : 'ทำรายการไม่ได้',
+    );
+    refresh();
   }
 
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-4 pb-10">
       <div className="flex flex-wrap items-center gap-3">
         <p className="mr-auto text-sm text-muted">
-          รอทำ {dishes} จาน · ทำเสร็จเฉลี่ย {waitMinutes(secondsPerItem)} นาที/จาน (
-          {waitMode === 'auto' ? 'ระบบคำนวณจากปุ่มที่กด' : 'ตั้งเอง'})
+          รอทำ {board.itemsInQueue} จาน · ทำเสร็จเฉลี่ย {waitMinutes(board.secondsPerItem)} นาที/จาน
+          ({board.waitMode === 'auto' ? 'ระบบคำนวณจากปุ่มที่กด' : 'ตั้งเอง'})
         </p>
         <button
           type="button"
@@ -149,20 +187,21 @@ export function VendorBoard({
         </Link>
         <button
           type="button"
-          aria-pressed={paused}
-          onClick={() => setPaused((p) => !p)}
+          aria-pressed={!board.isOpen}
+          onClick={togglePause}
           className={cx(
             btnSecondary,
             'min-h-12',
-            paused ? 'border-success text-success' : 'border-danger/40 text-danger',
+            board.isOpen ? 'border-danger/40 text-danger' : 'border-success text-success',
           )}
         >
           <PauseIcon size={18} />
-          {paused ? 'เปิดรับออเดอร์' : 'ปิดรับชั่วคราว'}
+          {board.isOpen ? 'ปิดรับชั่วคราว' : 'เปิดรับออเดอร์'}
         </button>
       </div>
+      {offline && <OfflineBanner />}
 
-      {paused && (
+      {!board.isOpen && (
         <p className="mt-3 rounded-xl bg-danger-soft px-4 py-3 font-semibold text-danger">
           ปิดรับออเดอร์ใหม่ชั่วคราว · ออเดอร์ที่จ่ายแล้วยังอยู่บนกระดาน
         </p>
@@ -170,9 +209,7 @@ export function VendorBoard({
 
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         {COLUMNS.map((col) => {
-          const list = open
-            .filter((o) => o.status === col.status)
-            .sort((a, b) => a.queueNo - b.queueNo);
+          const list = orders.filter((o) => o.status === col.status);
           return (
             <section
               key={col.status}
@@ -204,15 +241,24 @@ export function VendorBoard({
                   <VendorOrderCard
                     key={o.id}
                     order={o}
+                    busy={busyId === o.id}
                     minutesSinceReady={
                       o.readyAt
-                        ? Math.max(0, Math.round((nowMs - new Date(o.readyAt).getTime()) / 60000))
+                        ? Math.max(0, Math.round((serverNow - Date.parse(o.readyAt)) / 60000))
                         : null
                     }
-                    onStart={() => set(o.id, 'cooking', { startedAt: now })}
-                    onReady={() => set(o.id, 'ready', { readyAt: now })}
-                    onPickedUp={() => set(o.id, 'picked_up', { pickedUpAt: now })}
-                    onRecall={() => setToast(`เรียกซ้ำ ${o.queueLabel} แล้ว`)}
+                    onStart={() => run(o, () => actSetOrderStatus(shopId, o.id, 'cooking'))}
+                    onReady={() =>
+                      run(
+                        o,
+                        () => actSetOrderStatus(shopId, o.id, 'ready'),
+                        `แจ้ง ${o.queueLabel} แล้ว`,
+                      )
+                    }
+                    onPickedUp={() => run(o, () => actSetOrderStatus(shopId, o.id, 'picked_up'))}
+                    onRecall={() =>
+                      run(o, () => actRecallOrder(shopId, o.id), `เรียกซ้ำ ${o.queueLabel} แล้ว`)
+                    }
                     onCancel={() => setCancelling(o)}
                   />
                 ))}
@@ -227,7 +273,9 @@ export function VendorBoard({
           {walkIn.added ? (
             <>
               <p className="mt-2 text-muted">บอกลูกค้าให้รอฟังเรียกเลขนี้</p>
-              <p className="my-4 text-center text-6xl font-bold text-primary">{walkIn.added}</p>
+              <p className="my-4 text-center text-6xl leading-[1.35] font-bold text-primary">
+                {walkIn.added}
+              </p>
               <button
                 type="button"
                 onClick={() => setWalkIn(null)}
@@ -287,9 +335,13 @@ export function VendorBoard({
             <button
               type="button"
               onClick={() => {
-                setOrders((os) => os.filter((o) => o.id !== cancelling.id));
-                setToast(`ยกเลิก ${cancelling.queueLabel} และบันทึกการคืนเงินแล้ว`);
+                const o = cancelling;
                 setCancelling(null);
+                void run(
+                  o,
+                  () => actSetOrderStatus(shopId, o.id, 'cancelled', 'ร้านยกเลิก'),
+                  `ยกเลิก ${o.queueLabel} และบันทึกการคืนเงินแล้ว`,
+                );
               }}
               className="min-h-12 rounded-xl bg-danger font-semibold text-white"
             >

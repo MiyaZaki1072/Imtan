@@ -66,8 +66,18 @@ function readNote(raw: unknown): string | null | undefined {
   return t === '' ? null : t;
 }
 
-export function buildOrder(shop: Shop, rawLines: unknown, rawAllergy: unknown): BuildResult {
-  if (!shop.isOpen) return { ok: false, error: 'shop_closed' };
+export interface BuildOptions {
+  /** Vendor-entered walk-in: paid in cash at the counter, so no ฿20 minimum, and it works while the shop is paused for app orders. */
+  walkIn?: boolean;
+}
+
+export function buildOrder(
+  shop: Shop,
+  rawLines: unknown,
+  rawAllergy: unknown,
+  options: BuildOptions = {},
+): BuildResult {
+  if (!shop.isOpen && !options.walkIn) return { ok: false, error: 'shop_closed' };
   if (!Array.isArray(rawLines)) return { ok: false, error: 'bad_input' };
   if (rawLines.length === 0) return { ok: false, error: 'empty' };
   if (rawLines.length > MAX_LINES) return { ok: false, error: 'bad_input' };
@@ -119,7 +129,7 @@ export function buildOrder(shop: Shop, rawLines: unknown, rawAllergy: unknown): 
   const totalSatang = items.reduce((s, it) => s + it.line_total_satang, 0);
   const issues = cartIssues(menus, totalSatang);
   if (issues.pairOnlyAlone) return { ok: false, error: 'pair_only_alone' };
-  if (issues.underMinimum) return { ok: false, error: 'under_minimum' };
+  if (issues.underMinimum && !options.walkIn) return { ok: false, error: 'under_minimum' };
 
   return {
     ok: true,

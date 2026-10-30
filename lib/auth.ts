@@ -2,29 +2,17 @@ import 'server-only';
 
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
-import type { Database } from './database.types';
-import { SAMPLE_VENDOR_SHOP } from './sample';
+import { assertAdmin, assertSignedIn, assertVendorOf, type Session } from './auth-rules';
 import { createAdminClient } from './supabase/admin';
 import { createClient } from './supabase/server';
 
 // Roles are checked on the server from the verified session plus `profiles`.
-// Never trust a role or shop id sent by the client.
+// Never trust a role or shop id sent by the client. The rules live in ./auth-rules.
 
-export type Role = Database['public']['Enums']['user_role'];
+export { AuthError, type Role, type Session } from './auth-rules';
 
-export interface Session {
-  userId: string;
-  displayName: string;
-  role: Role;
-  shopId: string | null;
-}
-
-export class AuthError extends Error {
-  constructor(public reason: 'signed_out' | 'forbidden') {
-    super(reason === 'signed_out' ? 'Not signed in' : 'Not allowed');
-    this.name = 'AuthError';
-  }
-}
+/** Admins see this shop on vendor screens until the demo shop picker exists (Phase 6). */
+const ADMIN_DEFAULT_SHOP = 'jae-buek';
 
 /** The verified session for this request, or null. Cached per request. */
 export const getSession = cache(async (): Promise<Session | null> => {
@@ -48,42 +36,28 @@ export const getSession = cache(async (): Promise<Session | null> => {
 
 /** Any signed-in user (guests are anonymous Supabase users). */
 export async function requireCustomer(): Promise<Session> {
-  const s = await getSession();
-  if (!s) throw new AuthError('signed_out');
-  return s;
+  return assertSignedIn(await getSession());
 }
 
 /** The vendor of this shop, or an admin. */
 export async function requireVendor(shopId: string): Promise<Session> {
-  const s = await getSession();
-  if (!s) throw new AuthError('signed_out');
-  if (s.role === 'admin') return s;
-  if (s.role !== 'vendor' || s.shopId !== shopId) throw new AuthError('forbidden');
-  return s;
+  return assertVendorOf(await getSession(), shopId);
 }
 
 export async function requireAdmin(): Promise<Session> {
-  const s = await getSession();
-  if (!s) throw new AuthError('signed_out');
-  if (s.role !== 'admin') throw new AuthError('forbidden');
-  return s;
+  return assertAdmin(await getSession());
 }
 
-/**
- * For vendor pages: the slug of the shop to show, or a redirect to /login.
- * Admins see the sample shop until the demo shop picker exists (Phase 6).
- */
-export const vendorPageShopSlug = cache(async (): Promise<string> => {
+/** For vendor pages: the shop to show, or a redirect to /login. */
+export const vendorPageShop = cache(async (): Promise<{ shopId: string; slug: string }> => {
   const s = await getSession();
   if (!s || (s.role !== 'vendor' && s.role !== 'admin')) redirect('/login?next=/vendor');
-  if (s.role === 'admin') return SAMPLE_VENDOR_SHOP;
-  const { data } = await createAdminClient()
-    .from('shops')
-    .select('slug')
-    .eq('id', s.shopId!)
-    .single();
+  const query = createAdminClient().from('shops').select('id, slug');
+  const { data } = await (
+    s.role === 'admin' ? query.eq('slug', ADMIN_DEFAULT_SHOP) : query.eq('id', s.shopId ?? '')
+  ).maybeSingle();
   if (!data) redirect('/login');
-  return data.slug;
+  return { shopId: data.id, slug: data.slug };
 });
 
 /** For admin pages: the admin session, or a redirect to /login. */

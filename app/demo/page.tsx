@@ -3,7 +3,6 @@ import { adminPageSession } from '@/lib/auth';
 import { DemoBanner } from '@/components/DemoBanner';
 import { btnPrimary, btnSecondary, card, cx } from '@/components/ui';
 import { getShops } from '@/lib/demo-data/load';
-import { SAMPLE_VENDOR_SHOP } from '@/lib/sample';
 
 // Presenter view (PLAN.md §5d). Admins only; Phase 6 adds the DEMO_PAYMENTS=true guard
 // and makes the controls work.
@@ -27,7 +26,7 @@ async function DemoPageContent() {
           <label className="block">
             <span className="mb-1.5 block text-sm font-semibold">ร้านบนกระดานแม่ค้า</span>
             <select
-              defaultValue={SAMPLE_VENDOR_SHOP}
+              defaultValue="jae-buek"
               disabled
               className="min-h-12 w-full rounded-xl border border-border bg-surface px-3"
             >
