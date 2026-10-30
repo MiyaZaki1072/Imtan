@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { getShops } from '@/lib/demo-data/load';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
 // Accounts are <username>@imtan.local in Supabase Auth.
@@ -16,7 +16,11 @@ function safeNext(next: FormDataEntryValue | null, fallback: string): string {
 
 export async function vendorQuickLogin(formData: FormData): Promise<void> {
   const slug = formData.get('slug');
-  if (typeof slug !== 'string' || !getShops().some((s) => s.slug === slug)) {
+  const { data: shop } =
+    typeof slug === 'string'
+      ? await createAdminClient().from('shops').select('slug').eq('slug', slug).maybeSingle()
+      : { data: null };
+  if (typeof slug !== 'string' || !shop) {
     redirect('/login?error=shop');
   }
   const password = process.env.VENDOR_LOGIN_PASSWORD;
@@ -51,6 +55,14 @@ export async function adminLogin(
     password,
   });
   if (error) return { error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' };
+  // Vendors with their own password sign in here too; send each role to its own home.
+  const { data: claims } = await supabase.auth.getClaims();
+  const { data: profile } = await createAdminClient()
+    .from('profiles')
+    .select('role')
+    .eq('id', claims?.claims?.sub ?? '')
+    .maybeSingle();
+  if (profile?.role === 'vendor') redirect('/vendor');
   redirect(safeNext(formData.get('next'), '/admin'));
 }
 

@@ -27,3 +27,18 @@ export async function actSetAdminShop(slug: string) {
   if (!demoPaymentsEnabled()) return unavailable;
   return ops.setAdminShop(await requireAdmin(), slug);
 }
+
+// Admin app (Phase 9): these work in production too, so they are not behind DEMO_PAYMENTS.
+
+export async function actCreateShop(input: unknown) {
+  return ops.createShopWithAccount(await requireAdmin(), input);
+}
+
+export async function actResetVendorPassword(shopId: string, password?: string) {
+  return ops.resetVendorPassword(await requireAdmin(), shopId, password);
+}
+
+/** Choose which shop the vendor screens (menu, stock, settings, board) show for this admin. */
+export async function actSelectShop(slug: string) {
+  return ops.setAdminShop(await requireAdmin(), slug);
+}

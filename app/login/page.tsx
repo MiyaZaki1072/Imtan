@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { card, cx } from '@/components/ui';
-import { getShops } from '@/lib/demo-data/load';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { AdminForm, VendorShops } from './LoginForms';
 
 const ERRORS: Record<string, string> = {
   shop: 'ไม่พบร้านนี้',
-  vendor: 'เข้าร้านไม่สำเร็จ ลองใหม่อีกครั้ง',
+  vendor: 'เข้าร้านไม่สำเร็จ ถ้าร้านนี้ตั้งรหัสผ่านเอง ให้ใช้ชื่อผู้ใช้และรหัสผ่านด้านล่าง',
 };
 
 export default function LoginPage(props: PageProps<'/login'>) {
@@ -21,7 +21,11 @@ async function Login({ searchParams }: PageProps<'/login'>) {
   const params = await searchParams;
   const error = typeof params.error === 'string' ? ERRORS[params.error] : undefined;
   const next = typeof params.next === 'string' ? params.next : '/admin';
-  const shops = getShops().map(({ slug, name, category }) => ({ slug, name, category }));
+  const { data } = await createAdminClient()
+    .from('shops')
+    .select('slug, name, category')
+    .order('name');
+  const shops = data ?? [];
 
   return (
     <main className="flex flex-1 justify-center px-4 py-10">
@@ -46,7 +50,7 @@ async function Login({ searchParams }: PageProps<'/login'>) {
 
         <section className={cx(card, 'mt-8 px-5 py-5')} aria-labelledby="admin-title">
           <h2 id="admin-title" className="font-bold">
-            ผู้ดูแลระบบ
+            ผู้ดูแลระบบ / ร้านที่ตั้งรหัสผ่านเอง
           </h2>
           <AdminForm next={next.startsWith('/vendor') ? '/admin' : next} />
         </section>

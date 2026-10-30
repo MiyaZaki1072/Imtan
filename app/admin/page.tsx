@@ -24,6 +24,26 @@ async function AdminPageContent() {
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <section className={cx(card, 'px-5 py-5')}>
+          <h2 className="text-lg font-bold">ร้านและบัญชีร้านค้า</h2>
+          <p className="mt-1 text-sm text-muted">
+            สร้างร้านใหม่ รีเซ็ตรหัสผ่าน และเข้าไปแก้เมนู/ราคาของร้านไหนก็ได้
+          </p>
+          <Link href="/admin/shops" className={cx(btnPrimary, 'mt-4 min-h-12')}>
+            จัดการร้าน
+          </Link>
+        </section>
+
+        <section className={cx(card, 'px-5 py-5')}>
+          <h2 className="text-lg font-bold">สถิติ</h2>
+          <p className="mt-1 text-sm text-muted">
+            ออเดอร์ที่จ่ายแล้ว หมดเวลา ยกเลิก · ความเร็วแม่ค้า · ความแม่นของเวลารอ · ความเห็นลูกค้า
+          </p>
+          <Link href="/admin/stats" className={cx(btnPrimary, 'mt-4 min-h-12')}>
+            ดูสถิติ
+          </Link>
+        </section>
+
+        <section className={cx(card, 'px-5 py-5')}>
           <h2 className="text-lg font-bold">เครื่องมือเดโม</h2>
           <p className="mt-1 text-sm text-muted">
             มือถือลูกค้าและกระดานแม่ค้าในจอเดียว พร้อมปุ่มจำลองช่วงพีค

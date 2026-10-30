@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { signOut } from '@/app/login/actions';
 import { getSession, vendorPageShop } from '@/lib/auth';
+import { AdminShopPicker } from '@/components/AdminShopPicker';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getShopFromDb } from '@/lib/shops';
 
 // Vendor screens target a 1024 px tablet and still work on a phone.
@@ -19,6 +21,10 @@ export async function VendorShell({ children }: { children: React.ReactNode }) {
   const { slug } = await vendorPageShop();
   const session = await getSession();
   const shop = (await getShopFromDb(slug))?.shop;
+  const isAdmin = session?.role === 'admin';
+  const allShops = isAdmin
+    ? ((await createAdminClient().from('shops').select('slug, name').order('name')).data ?? [])
+    : [];
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border bg-surface">
@@ -29,6 +35,7 @@ export async function VendorShell({ children }: { children: React.ReactNode }) {
               อิ่มทัน สำหรับร้านค้า{session?.role === 'admin' && ' · ผู้ดูแล'}
             </span>
           </p>
+          {isAdmin && <AdminShopPicker shops={allShops} current={slug} />}
           <nav aria-label="เมนูร้านค้า" className="-mx-2 flex flex-wrap">
             {NAV.map((n) => (
               <Link key={n.href} href={n.href} className={navLink}>
