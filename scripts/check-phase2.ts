@@ -147,16 +147,14 @@ async function main() {
   );
   await denied(
     'customer cannot insert orders',
-    a.c
-      .from('orders')
-      .insert({
-        shop_id: shopA,
-        customer_name: 'x',
-        source: 'app',
-        status: 'queued',
-        item_count: 1,
-        total_satang: 1,
-      }),
+    a.c.from('orders').insert({
+      shop_id: shopA,
+      customer_name: 'x',
+      source: 'app',
+      status: 'queued',
+      item_count: 1,
+      total_satang: 1,
+    }),
   );
   {
     const { error } = await a.c

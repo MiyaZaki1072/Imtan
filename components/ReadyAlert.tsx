@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef } from 'react';
+import { playChime } from '@/lib/alert';
 import { CheckIcon } from './icons';
 import { btnLarge, cx } from './ui';
 
@@ -12,11 +13,16 @@ export function ReadyAlert({
   label,
   shopName,
   items,
+  callKey,
+  busy,
   onReceived,
 }: {
   label: string;
   shopName: string;
   items: string[];
+  /** Changes on every vendor "เรียกซ้ำ", which plays the chime and vibration again. */
+  callKey: string;
+  busy?: boolean;
   onReceived: () => void;
 }) {
   const titleId = useId();
@@ -29,6 +35,7 @@ export function ReadyAlert({
     } catch {
       // Vibration is optional.
     }
+    playChime();
     const original = document.title;
     let on = false;
     const timer = window.setInterval(() => {
@@ -39,7 +46,7 @@ export function ReadyAlert({
       window.clearInterval(timer);
       document.title = original;
     };
-  }, [label]);
+  }, [label, callKey]);
 
   return (
     <div
@@ -72,12 +79,13 @@ export function ReadyAlert({
           ref={buttonRef}
           type="button"
           onClick={onReceived}
+          disabled={busy}
           className={cx(
             btnLarge,
             'inline-flex items-center justify-center rounded-2xl bg-white font-bold text-success',
           )}
         >
-          ได้รับอาหารแล้ว
+          {busy ? 'กำลังบันทึก…' : 'ได้รับอาหารแล้ว'}
         </button>
         <p className="mt-3 text-sm text-white/85">
           ถ้ายังไม่มารับ แม่ค้ากด &quot;เรียกซ้ำ&quot; เพื่อเตือนอีกครั้งได้

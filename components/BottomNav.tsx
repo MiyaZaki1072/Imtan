@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { SAMPLE_ORDER_ID } from '@/lib/sample';
 import { HomeIcon, QrIcon, TicketIcon } from './icons';
 import { cx } from './ui';
 
@@ -10,7 +9,7 @@ const ITEMS = [
   { href: '/', label: 'หน้าแรก', Icon: HomeIcon, match: (p: string) => p === '/' },
   { href: '/scan', label: 'สแกน QR', Icon: QrIcon, match: (p: string) => p.startsWith('/scan') },
   {
-    href: `/orders/${SAMPLE_ORDER_ID}`,
+    href: '/orders',
     label: 'คิวของฉัน',
     Icon: TicketIcon,
     match: (p: string) => p.startsWith('/orders'),

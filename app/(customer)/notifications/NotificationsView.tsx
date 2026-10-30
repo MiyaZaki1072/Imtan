@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { BackLink } from '@/components/BackLink';
 import { BellIcon } from '@/components/icons';
 import { btnLarge, btnPrimary, btnSecondary, card, cx } from '@/components/ui';
-import { SAMPLE_ORDER_ID } from '@/lib/sample';
 
 type Result = 'granted' | 'denied' | 'unsupported' | null;
 
@@ -22,7 +21,7 @@ export function NotificationsView() {
     setResult(permission === 'granted' ? 'granted' : 'denied');
   }
 
-  const queueHref = `/orders/${SAMPLE_ORDER_ID}?state=queued`;
+  const queueHref = '/orders';
 
   return (
     <main className="flex flex-1 flex-col px-4 pt-3 pb-8">

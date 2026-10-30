@@ -2,54 +2,54 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { BackLink } from '@/components/BackLink';
 import { BottomNav } from '@/components/BottomNav';
 import { CheckIcon } from '@/components/icons';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { OrderSteps, type OrderStep } from '@/components/OrderSteps';
 import { QueueTicket, TicketStat } from '@/components/QueueTicket';
 import { ReadyAlert } from '@/components/ReadyAlert';
 import { btnLarge, btnPrimary, card, cx } from '@/components/ui';
+import { useArmAudio, useWakeLock } from '@/lib/alert';
 import { formatBaht, formatClock, waitMinutes } from '@/lib/format';
-import { cookingWaitSeconds, queuedWaitSeconds } from '@/lib/queue';
-import { minutesFromSampleNow, type SampleCustomerOrder, type SampleStatus } from '@/lib/sample';
+import { markReceived, submitFeedback } from '@/lib/orders/actions';
+import type { OrderViewData, WaitFeedback } from '@/lib/orders/types';
+import { remainingWaitSeconds } from '@/lib/orders/wait';
+import { useLiveData } from '@/lib/use-live-data';
 
-const STATES: SampleStatus[] = ['queued', 'cooking', 'ready', 'picked_up'];
-const STATE_LABEL: Record<SampleStatus, string> = {
-  queued: 'อยู่ในคิว',
-  cooking: 'กำลังทำ',
-  ready: 'พร้อมรับ',
-  picked_up: 'รับแล้ว',
-};
-
-type Feedback = 'faster' | 'accurate' | 'slower';
-const FEEDBACK: { value: Feedback; label: string }[] = [
+const FEEDBACK: { value: WaitFeedback; label: string }[] = [
   { value: 'faster', label: 'เร็วกว่าที่บอก' },
   { value: 'accurate', label: 'ตรงตามที่บอก' },
   { value: 'slower', label: 'ช้ากว่าที่บอก' },
 ];
 
-function steps(order: SampleCustomerOrder, status: SampleStatus): OrderStep[] {
-  const idx = STATES.indexOf(status);
-  const state = (i: number) => (i < idx + 1 ? 'done' : i === idx + 1 ? 'current' : 'todo');
+function steps(o: OrderViewData): OrderStep[] {
+  const idx = ['queued', 'cooking', 'ready', 'picked_up'].indexOf(o.status);
+  const cooking = idx >= 1;
   return [
     {
       title: 'ชำระเงินแล้ว · ร้านรับออเดอร์',
-      detail: `${formatClock(order.paidAt)} น.`,
+      detail: o.paidAt ? `${formatClock(o.paidAt)} น.` : '',
       state: 'done',
     },
     {
       title: 'อยู่ในคิว',
-      detail: idx === 0 ? 'แม่ค้ากำลังทำคิวก่อนหน้าคุณ' : `${formatClock(order.queuedAt)} น.`,
+      detail:
+        idx === 0
+          ? 'แม่ค้ากำลังทำคิวก่อนหน้าคุณ'
+          : o.queuedAt
+            ? `${formatClock(o.queuedAt)} น.`
+            : '',
       state: idx === 0 ? 'current' : 'done',
     },
     {
       title: 'กำลังทำอาหารของคุณ',
       detail:
-        idx >= 1 && order.startedAt
-          ? `แม่ค้ากด "เริ่มทำ" เมื่อ ${formatClock(order.startedAt)} น.`
+        cooking && o.startedAt
+          ? `แม่ค้ากด "เริ่มทำ" เมื่อ ${formatClock(o.startedAt)} น.`
           : 'เมื่อแม่ค้ากด "เริ่มทำ"',
-      state: state(1),
+      state: idx === 1 ? 'current' : idx > 1 ? 'done' : 'todo',
     },
     {
       title: 'พร้อมรับ – แจ้งเตือนทันที',
@@ -59,20 +59,91 @@ function steps(order: SampleCustomerOrder, status: SampleStatus): OrderStep[] {
   ];
 }
 
-export function OrderView({ order }: { order: SampleCustomerOrder }) {
+export function OrderView({ initial }: { initial: OrderViewData }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [pending, startTransition] = useTransition();
+  const {
+    data: o,
+    offline,
+    fetchedAt,
+    refresh,
+  } = useLiveData(
+    `/api/orders/${initial.id}`,
+    initial,
+    [
+      { table: 'orders', filter: `id=eq.${initial.id}` },
+      { table: 'shops', filter: `id=eq.${initial.shopId}` },
+    ],
+    `order:${initial.id}`,
+  );
 
-  const raw = params.get('state') as SampleStatus | null;
-  const status: SampleStatus = raw && STATES.includes(raw) ? raw : 'queued';
-  const justPaid = params.get('paid') === '1' && status === 'queued';
-  const go = (s: SampleStatus) => router.replace(`${pathname}?state=${s}`, { scroll: false });
+  // Server time, advanced by the device clock between fetches (ignores a wrong device clock).
+  // Null until the first tick, so server and client render the same first frame.
+  const [nowMs, setNowMs] = useState<number | null>(null);
+  useEffect(() => {
+    const t = window.setInterval(() => setNowMs(Date.now()), 10_000);
+    return () => window.clearInterval(t);
+  }, []);
+  const serverNow = new Date(
+    Date.parse(o.serverNow) + (nowMs === null ? 0 : Math.max(0, nowMs - fetchedAt)),
+  );
 
-  const items = order.items.map((it) => `${it.kitchenSummary} × ${it.qty}`);
-  const queuedWait = queuedWaitSeconds(order.dishesAhead, order.itemCount, order.secondsPerItem);
-  const readyBy = minutesFromSampleNow(queuedWait / 60);
+  useArmAudio();
+  useWakeLock(o.status === 'queued' || o.status === 'cooking');
+
+  useEffect(() => {
+    if (o.status === 'awaiting_payment') router.replace(`/orders/${o.id}/pay`);
+  }, [o.status, o.id, router]);
+
+  const items = o.items.map((it) => `${it.kitchenSummary} × ${it.qty}`);
+  const wait = remainingWaitSeconds(o, serverNow) ?? 0;
+  const readyBy = new Date(serverNow.getTime() + wait * 1000);
+  const label = o.queueLabel ?? '';
+  const justPaid = params.get('paid') === '1' && o.status === 'queued';
+
+  function received() {
+    startTransition(async () => {
+      await markReceived(o.id);
+      refresh();
+    });
+  }
+
+  function rate(value: WaitFeedback) {
+    startTransition(async () => {
+      await submitFeedback(o.id, value);
+      refresh();
+    });
+  }
+
+  if (o.status === 'awaiting_payment') {
+    return <p className="px-4 pt-10 text-muted">กำลังไปหน้าชำระเงิน…</p>;
+  }
+
+  if (o.status === 'expired' || o.status === 'abandoned' || o.status === 'cancelled') {
+    const text =
+      o.status === 'expired'
+        ? ['หมดเวลาชำระเงิน', 'ออเดอร์นี้ไม่ได้รับเลขคิวและไม่มีการตัดเงิน']
+        : o.status === 'abandoned'
+          ? ['ยกเลิกออเดอร์แล้ว', 'ยังไม่ได้ชำระเงิน จึงไม่มีการตัดเงิน']
+          : ['ร้านยกเลิกออเดอร์', `คิว ${label} · บันทึกการคืนเงิน (จำลอง) แล้ว`];
+    return (
+      <>
+        <main className="flex flex-1 flex-col items-center justify-center px-4 pb-24 text-center">
+          <h1 className="text-2xl font-bold">{text[0]}</h1>
+          <p className="mt-2 text-muted">{text[1]}</p>
+          <Link
+            href={o.status === 'cancelled' ? '/' : `/s/${o.shopSlug}/cart`}
+            className={cx(btnPrimary, 'mt-6 min-h-12')}
+          >
+            {o.status === 'cancelled' ? 'กลับหน้าแรก' : 'กลับไปสั่งใหม่'}
+          </Link>
+        </main>
+        <BottomNav />
+      </>
+    );
+  }
 
   if (justPaid) {
     return (
@@ -83,26 +154,24 @@ export function OrderView({ order }: { order: SampleCustomerOrder }) {
           </span>
           <h1 className="mt-4 text-3xl font-bold">ชำระเงินแล้ว ได้คิวแล้ว!</h1>
           <p className="mt-1 text-sm text-white/90">
-            {formatClock(order.paidAt)} น. · ร้านได้รับออเดอร์ของคุณแล้ว
+            {o.paidAt && `${formatClock(o.paidAt)} น. · `}ร้านได้รับออเดอร์ของคุณแล้ว
           </p>
         </div>
         <div className="mt-6 rounded-2xl bg-surface px-4 py-5 text-ink">
-          <p className="text-center text-sm text-muted">{order.shopName} · เลขคิวของคุณ</p>
-          <p className="text-center text-6xl leading-tight font-bold text-primary">
-            {order.queueLabel}
-          </p>
+          <p className="text-center text-sm text-muted">{o.shopName} · เลขคิวของคุณ</p>
+          <p className="mt-2 text-center text-6xl leading-[1.35] font-bold text-primary">{label}</p>
           <ul className="mt-3 border-t border-border pt-3 text-sm">
             {items.map((it) => (
               <li key={it}>{it}</li>
             ))}
           </ul>
           <div className="mt-3 grid grid-cols-3 gap-2">
-            <TicketStat label="จานก่อนหน้า" value={order.dishesAhead} />
-            <TicketStat label="รอประมาณ" value={`${waitMinutes(queuedWait)} นาที`} />
+            <TicketStat label="จานก่อนหน้า" value={o.dishesAhead} />
+            <TicketStat label="รอประมาณ" value={`${waitMinutes(wait)} นาที`} />
             <TicketStat label="พร้อมราว" value={formatClock(readyBy)} />
           </div>
           <p className="mt-3 text-center text-sm text-muted">
-            ชำระเงินแล้ว · {formatBaht(order.totalSatang ?? 0)}
+            ชำระเงินแล้ว · {formatBaht(o.totalSatang ?? 0)}
           </p>
         </div>
         <div className="mt-auto space-y-2.5 pt-6">
@@ -117,7 +186,7 @@ export function OrderView({ order }: { order: SampleCustomerOrder }) {
           </Link>
           <button
             type="button"
-            onClick={() => go('queued')}
+            onClick={() => router.replace(pathname, { scroll: false })}
             className={cx(btnLarge, 'rounded-xl border-2 border-white/80 font-bold text-white')}
           >
             ดูสถานะคิวของฉัน
@@ -127,60 +196,41 @@ export function OrderView({ order }: { order: SampleCustomerOrder }) {
     );
   }
 
-  if (status === 'ready') {
+  if (o.status === 'ready') {
     return (
       <ReadyAlert
-        label={order.queueLabel}
-        shopName={order.shopName}
+        label={label}
+        shopName={o.shopName}
         items={items}
-        onReceived={() => go('picked_up')}
+        callKey={o.lastCalledAt ?? ''}
+        busy={pending}
+        onReceived={received}
       />
     );
   }
 
-  const switcher = (
-    <section className="mt-6 rounded-xl border border-dashed border-border px-3 py-3">
-      <p className="text-xs text-muted">ดูตัวอย่างสถานะ (ต้นแบบ)</p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {STATES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            aria-pressed={s === status}
-            onClick={() => go(s)}
-            className={cx(
-              'min-h-11 rounded-full border px-3 text-sm',
-              s === status
-                ? 'border-primary bg-primary-soft font-semibold text-primary-hover'
-                : 'border-border',
-            )}
-          >
-            {STATE_LABEL[s]}
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-
-  if (status === 'picked_up') {
-    const waited = order.readyAt
-      ? Math.round((new Date(order.readyAt).getTime() - new Date(order.paidAt).getTime()) / 60000)
-      : 0;
+  if (o.status === 'picked_up') {
+    const waited =
+      o.readyAt && o.paidAt
+        ? Math.max(0, Math.round((Date.parse(o.readyAt) - Date.parse(o.paidAt)) / 60000))
+        : null;
     return (
       <>
         <main className="flex-1 px-4 pt-10 pb-24">
           <h1 className="text-center text-3xl font-bold">รับอาหารแล้ว ขอให้อร่อย!</h1>
           <p className="mt-1 text-center text-muted">
-            คิว {order.queueLabel} · {order.shopName}
+            คิว {label} · {o.shopName}
           </p>
           <section className={cx(card, 'mt-6 px-4 py-4')} aria-label="สรุปเวลาครั้งนี้">
             <h2 className="font-bold">สรุปเวลาครั้งนี้</h2>
             <dl className="mt-2 space-y-2 text-sm">
-              {[
-                ['ชำระเงิน', order.paidAt],
-                ['อาหารพร้อม', order.readyAt],
-                ['รับอาหาร', order.pickedUpAt],
-              ].map(([k, v]) =>
+              {(
+                [
+                  ['ชำระเงิน', o.paidAt],
+                  ['อาหารพร้อม', o.readyAt],
+                  ['รับอาหาร', o.pickedUpAt],
+                ] as const
+              ).map(([k, v]) =>
                 v ? (
                   <div key={k} className="flex justify-between">
                     <dt className="text-muted">{k}</dt>
@@ -188,12 +238,16 @@ export function OrderView({ order }: { order: SampleCustomerOrder }) {
                   </div>
                 ) : null,
               )}
-              <div className="flex justify-between border-t border-border pt-2 font-semibold">
-                <dt>รอจริง</dt>
-                <dd className="text-success">
-                  {waited} นาที (แอปประมาณไว้ {waitMinutes(queuedWait)} นาที)
-                </dd>
-              </div>
+              {waited !== null && (
+                <div className="flex justify-between border-t border-border pt-2 font-semibold">
+                  <dt>รอจริง</dt>
+                  <dd className="text-success">
+                    {waited} นาที
+                    {o.estimatedWaitSeconds !== null &&
+                      ` (แอปประมาณไว้ ${waitMinutes(o.estimatedWaitSeconds)} นาที)`}
+                  </dd>
+                </div>
+              )}
             </dl>
           </section>
 
@@ -204,11 +258,12 @@ export function OrderView({ order }: { order: SampleCustomerOrder }) {
                 <button
                   key={f.value}
                   type="button"
-                  aria-pressed={feedback === f.value}
-                  onClick={() => setFeedback(f.value)}
+                  aria-pressed={o.feedback === f.value}
+                  disabled={pending}
+                  onClick={() => rate(f.value)}
                   className={cx(
                     'min-h-12 rounded-xl border px-2 text-sm',
-                    feedback === f.value
+                    o.feedback === f.value
                       ? 'border-primary bg-primary-soft font-semibold text-primary-hover'
                       : 'border-border',
                   )}
@@ -218,7 +273,7 @@ export function OrderView({ order }: { order: SampleCustomerOrder }) {
               ))}
             </div>
             <p className="mt-2 text-xs text-muted" aria-live="polite">
-              {feedback
+              {o.feedback
                 ? 'ขอบคุณ! คำตอบช่วยให้ระบบประมาณเวลาได้แม่นขึ้น'
                 : 'คำตอบช่วยให้ระบบประมาณเวลาได้แม่นขึ้น'}
             </p>
@@ -227,28 +282,28 @@ export function OrderView({ order }: { order: SampleCustomerOrder }) {
           <Link href="/" className={cx(btnPrimary, btnLarge, 'mt-6')}>
             กลับหน้าแรก
           </Link>
-          {switcher}
         </main>
         <BottomNav />
       </>
     );
   }
 
-  const cooking = status === 'cooking';
-  const cookLeft = cookingWaitSeconds(order.itemCount, order.secondsPerItem, 60);
-  const cookTotal = order.itemCount * order.secondsPerItem;
+  const cooking = o.status === 'cooking';
+  const cookTotal = Math.max(1, o.itemCount * o.secondsPerItem);
+  const pct = Math.min(100, Math.max(0, ((cookTotal - wait) / cookTotal) * 100));
 
   return (
     <>
       <main className="flex-1 px-4 pt-3 pb-24">
         <BackLink href="/">หน้าแรก</BackLink>
         <h1 className="mt-1 text-2xl font-bold">คิวของฉัน</h1>
+        {offline && <OfflineBanner />}
 
         <div className="mt-4">
           {cooking ? (
             <QueueTicket
-              shopName={order.shopName}
-              label={order.queueLabel}
+              shopName={o.shopName}
+              label={label}
               tone="cooking"
               badge={
                 <span className="inline-block rounded-lg bg-warning-soft px-3 py-1 text-sm font-semibold text-warning ring-1 ring-warning/40">
@@ -263,36 +318,42 @@ export function OrderView({ order }: { order: SampleCustomerOrder }) {
                 aria-label="ความคืบหน้าการทำอาหาร"
                 aria-valuemin={0}
                 aria-valuemax={100}
-                aria-valuenow={Math.round(((cookTotal - cookLeft) / cookTotal) * 100)}
+                aria-valuenow={Math.round(pct)}
               >
-                <div
-                  className="h-full rounded-full bg-warning"
-                  style={{ width: `${((cookTotal - cookLeft) / cookTotal) * 100}%` }}
-                />
+                <div className="h-full rounded-full bg-warning" style={{ width: `${pct}%` }} />
               </div>
               <div className="mt-1 flex justify-between text-xs text-muted">
-                <span>เริ่มทำ {order.startedAt && formatClock(order.startedAt)}</span>
-                <span>พร้อมราว {order.readyAt && formatClock(order.readyAt)}</span>
+                <span>เริ่มทำ {o.startedAt && formatClock(o.startedAt)}</span>
+                <span>พร้อมราว {formatClock(readyBy)}</span>
               </div>
-              <p className="mt-3 text-3xl font-bold">อีกประมาณ {waitMinutes(cookLeft)} นาที</p>
+              <p className="mt-3 text-3xl font-bold">
+                {wait > 0 ? `อีกประมาณ ${waitMinutes(wait)} นาที` : 'ใกล้เสร็จแล้ว'}
+              </p>
             </QueueTicket>
           ) : (
-            <QueueTicket shopName={order.shopName} label={order.queueLabel}>
+            <QueueTicket shopName={o.shopName} label={label}>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <TicketStat label="จานก่อนหน้าคุณ" value={`${order.dishesAhead} จาน`} />
-                <TicketStat label="เวลารอโดยประมาณ" value={`~${waitMinutes(queuedWait)} นาที`} />
+                <TicketStat label="จานก่อนหน้าคุณ" value={`${o.dishesAhead} จาน`} />
+                <TicketStat label="เวลารอโดยประมาณ" value={`~${waitMinutes(wait)} นาที`} />
               </div>
               <p className="mt-3 text-sm text-muted">
-                คาดว่าพร้อมรับประมาณ {formatClock(readyBy)} น. (
-                {order.dishesAhead + order.itemCount} จาน × เฉลี่ย{' '}
-                {waitMinutes(order.secondsPerItem)} นาที)
+                คาดว่าพร้อมรับประมาณ {formatClock(readyBy)} น. ({o.dishesAhead + o.itemCount} จาน ×
+                เฉลี่ย {waitMinutes(o.secondsPerItem)} นาที)
               </p>
             </QueueTicket>
           )}
         </div>
 
+        <section className={cx(card, 'mt-3 px-4 py-3')} aria-label="รายการที่สั่ง">
+          <ul className="space-y-0.5 text-sm">
+            {items.map((it) => (
+              <li key={it}>{it}</li>
+            ))}
+          </ul>
+        </section>
+
         <h2 className="mt-6 mb-2 font-bold">สถานะออเดอร์</h2>
-        <OrderSteps steps={steps(order, status)} />
+        <OrderSteps steps={steps(o)} />
 
         <p className="mt-4 rounded-xl bg-primary-soft px-4 py-3 text-sm text-primary-hover">
           {cooking
@@ -302,7 +363,6 @@ export function OrderView({ order }: { order: SampleCustomerOrder }) {
         <p className="mt-3 text-center text-xs text-muted">
           ชำระเงินแล้ว ยกเลิกเองไม่ได้ · หากต้องการยกเลิก แจ้งแม่ค้าที่ร้าน
         </p>
-        {switcher}
       </main>
       <BottomNav />
     </>

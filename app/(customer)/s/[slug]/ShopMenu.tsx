@@ -3,12 +3,14 @@
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
+import { BackLink } from '@/components/BackLink';
 import { CustomizeSheet } from '@/components/CustomizeSheet';
 import { CartIcon } from '@/components/icons';
 import { MenuCard } from '@/components/MenuCard';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { btnPrimary, cx } from '@/components/ui';
 import { useCart } from '@/lib/cart-store';
-import { formatBaht } from '@/lib/format';
+import { formatBaht, waitMinutes } from '@/lib/format';
 import {
   ingredientMap,
   lineTotal,
@@ -16,13 +18,22 @@ import {
   startingPrice,
   validate,
   type CartLine,
-  type Shop,
 } from '@/lib/menu';
+import type { LoadedShop } from '@/lib/menu/db';
+import { useLiveShop } from '@/lib/use-live-shop';
 
-export function ShopMenu({ shop }: { shop: Shop }) {
+const BUSY_SOFT = {
+  ว่าง: 'bg-success-soft text-success',
+  ปานกลาง: 'bg-warning-soft text-warning',
+  แน่น: 'bg-danger-soft text-danger',
+} as const;
+
+export function ShopMenu({ initial }: { initial: LoadedShop }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const { data, offline } = useLiveShop(initial);
+  const { shop, stats } = data;
   const { cart, add } = useCart(shop.slug);
   const ingredients = useMemo(() => ingredientMap(shop.ingredients), [shop.ingredients]);
 
@@ -61,6 +72,21 @@ export function ShopMenu({ shop }: { shop: Shop }) {
 
   return (
     <>
+      <header className="border-b border-border bg-surface px-4 pt-3 pb-4">
+        <BackLink href="/">กลับหน้าแรก</BackLink>
+        <h1 className="mt-1 text-2xl font-bold">{shop.name}</h1>
+        <p className="text-sm text-muted">{shop.category}</p>
+        <div className="mt-3 flex flex-wrap gap-2 text-sm font-semibold">
+          <span className={`rounded-full px-3 py-1 ${BUSY_SOFT[stats.busyLevel]}`}>
+            {stats.busyLevel} · {stats.itemsInQueue} จานในคิว
+          </span>
+          <span className="rounded-full bg-bg px-3 py-1 text-ink">
+            ถ้าสั่งตอนนี้ รอประมาณ {waitMinutes(stats.estWaitSeconds + stats.secondsPerItem)} นาที
+          </span>
+        </div>
+      </header>
+      {offline && <OfflineBanner />}
+
       {!shop.isOpen && (
         <p className="mx-4 mt-4 rounded-xl bg-danger-soft px-4 py-3 font-semibold text-danger">
           ร้านปิดรับออเดอร์ชั่วคราว

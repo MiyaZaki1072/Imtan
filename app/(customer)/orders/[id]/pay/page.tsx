@@ -1,26 +1,27 @@
-import { notFound } from 'next/navigation';
-import { getShop } from '@/lib/demo-data/load';
-import { sampleCustomerOrder, SAMPLE_ORDER_ID, SAMPLE_VENDOR_SHOP } from '@/lib/sample';
+import { notFound, redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import { getSession } from '@/lib/auth';
+import { getOrderView } from '@/lib/orders/view';
+import { demoPaymentsEnabled } from '@/lib/payments';
 import { PayView } from './PayView';
 
-export function generateStaticParams() {
-  return [{ id: SAMPLE_ORDER_ID }];
+export default function PayPage(props: PageProps<'/orders/[id]/pay'>) {
+  return (
+    <Suspense fallback={<p className="px-4 pt-10 text-muted">กำลังโหลด…</p>}>
+      <Pay {...props} />
+    </Suspense>
+  );
 }
 
-// Phase 4 adds the DEMO_PAYMENTS=true check and order ownership.
-export default async function PayPage({ params }: PageProps<'/orders/[id]/pay'>) {
+async function Pay({ params }: PageProps<'/orders/[id]/pay'>) {
+  // Demo payment screens are 404 unless DEMO_PAYMENTS=true.
+  if (!demoPaymentsEnabled()) notFound();
   const { id } = await params;
-  const shop = getShop(SAMPLE_VENDOR_SHOP);
-  const order = id === SAMPLE_ORDER_ID && shop ? sampleCustomerOrder(shop) : null;
-  if (!order || !shop || order.totalSatang === null) notFound();
-
-  return (
-    <PayView
-      orderId={order.id}
-      shopSlug={shop.slug}
-      shopName={shop.name}
-      amountSatang={order.totalSatang}
-      items={order.items.map((it) => `${it.kitchenSummary} × ${it.qty}`)}
-    />
-  );
+  const session = await getSession();
+  if (!session) redirect(`/welcome?next=/orders/${id}/pay`);
+  const order = /^[0-9a-f-]{36}$/.test(id) ? await getOrderView(id, session.userId) : null;
+  if (!order || order.totalSatang === null) notFound();
+  // Paid, expired or abandoned orders belong on the order page.
+  if (order.status !== 'awaiting_payment') redirect(`/orders/${id}`);
+  return <PayView initial={order} />;
 }

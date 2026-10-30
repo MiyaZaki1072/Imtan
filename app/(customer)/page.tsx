@@ -1,19 +1,14 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import { BottomNav } from '@/components/BottomNav';
 import { Greeting } from '@/components/Greeting';
 import { QrIcon } from '@/components/icons';
-import { ShopRow } from '@/components/ShopRow';
-import { card, cx } from '@/components/ui';
-import { getShop, getShops } from '@/lib/demo-data/load';
-import { waitMinutes } from '@/lib/format';
-import { queuedWaitSeconds } from '@/lib/queue';
-import { sampleCustomerOrder, sampleStats, SAMPLE_VENDOR_SHOP } from '@/lib/sample';
+import { getSession } from '@/lib/auth';
+import { getHomeData } from '@/lib/home';
+import { HomeLive } from './HomeLive';
 
 export default function HomePage() {
-  const shops = getShops();
-  const myShop = getShop(SAMPLE_VENDOR_SHOP);
-  const mine = myShop ? sampleCustomerOrder(myShop) : null;
-
   return (
     <>
       <main className="flex-1 px-4 pt-6 pb-24">
@@ -38,52 +33,17 @@ export default function HomePage() {
           </span>
         </Link>
 
-        {mine && (
-          <Link
-            href={`/orders/${mine.id}`}
-            className={cx(card, 'mt-3 flex items-center gap-3 px-4 py-4 hover:border-primary/40')}
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs text-muted">คิวของฉัน · {mine.shopName}</span>
-              <span className="mt-0.5 block text-xl font-bold">
-                {mine.queueLabel} · รออีก ~
-                {waitMinutes(
-                  queuedWaitSeconds(mine.dishesAhead, mine.itemCount, mine.secondsPerItem),
-                )}{' '}
-                นาที
-              </span>
-            </span>
-            <span className="rounded-full bg-warning-soft px-3 py-1 text-sm font-semibold text-warning">
-              อยู่ในคิว
-            </span>
-          </Link>
-        )}
-
-        <div className="mt-7 flex items-baseline justify-between">
-          <h2 className="text-lg font-bold">คิวแต่ละร้านตอนนี้</h2>
-          <p className="text-xs text-muted">อัปเดตแบบเรียลไทม์</p>
-        </div>
-        <ul className="mt-3 space-y-2.5">
-          {shops.map((s) => {
-            const st = sampleStats(s);
-            return (
-              <li key={s.slug}>
-                <ShopRow
-                  slug={s.slug}
-                  name={s.name}
-                  category={s.category}
-                  dishesInQueue={st.dishesInQueue}
-                  waitSeconds={st.waitSeconds}
-                  busy={st.busy}
-                  isOpen={s.isOpen}
-                />
-              </li>
-            );
-          })}
-        </ul>
-        <p className="mt-4 text-xs text-muted">* จำนวนคิวและเวลารอเป็นข้อมูลตัวอย่างในต้นแบบ</p>
+        <Suspense fallback={<p className="mt-8 text-muted">กำลังโหลดคิว…</p>}>
+          <Live />
+        </Suspense>
       </main>
       <BottomNav />
     </>
   );
+}
+
+async function Live() {
+  const session = await getSession();
+  if (!session) redirect('/welcome');
+  return <HomeLive initial={await getHomeData(session.userId)} />;
 }

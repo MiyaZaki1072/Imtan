@@ -1,22 +1,24 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { getShop } from '@/lib/demo-data/load';
-import { sampleCustomerOrder, SAMPLE_ORDER_ID, SAMPLE_VENDOR_SHOP } from '@/lib/sample';
+import { getSession } from '@/lib/auth';
+import { getOrderView } from '@/lib/orders/view';
 import { OrderView } from './OrderView';
 
-export function generateStaticParams() {
-  return [{ id: SAMPLE_ORDER_ID }];
-}
-
-export default async function OrderPage({ params }: PageProps<'/orders/[id]'>) {
-  const { id } = await params;
-  const shop = getShop(SAMPLE_VENDOR_SHOP);
-  const order = id === SAMPLE_ORDER_ID && shop ? sampleCustomerOrder(shop) : null;
-  if (!order) notFound();
-
+export default function OrderPage(props: PageProps<'/orders/[id]'>) {
   return (
     <Suspense fallback={<p className="px-4 pt-10 text-muted">กำลังโหลดคิว…</p>}>
-      <OrderView order={order} />
+      <Order {...props} />
     </Suspense>
   );
+}
+
+async function Order({ params }: PageProps<'/orders/[id]'>) {
+  const { id } = await params;
+  const session = await getSession();
+  if (!session) redirect(`/welcome?next=/orders/${id}`);
+  // Only the owner can open an order; anything else is a 404.
+  const order = /^[0-9a-f-]{36}$/.test(id) ? await getOrderView(id, session.userId) : null;
+  if (!order) notFound();
+  if (order.status === 'awaiting_payment') redirect(`/orders/${id}/pay`);
+  return <OrderView initial={order} />;
 }

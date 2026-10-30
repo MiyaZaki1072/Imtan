@@ -24,7 +24,7 @@ export function QueueTicket({
       )}
     >
       {badge ?? <p className="text-sm text-muted">{shopName} · เลขคิวของคุณ</p>}
-      <p className="mt-1 text-6xl leading-tight font-bold tracking-tight text-primary">{label}</p>
+      <p className="mt-3 text-6xl leading-[1.35] font-bold tracking-tight text-primary">{label}</p>
       {children}
     </section>
   );

@@ -21,7 +21,6 @@ import { busyLevel, type BusyLevel } from './queue';
 /** Fixed sample clock (Bangkok lunch rush) so server and client render the same times. */
 export const SAMPLE_NOW = '2026-10-30T11:42:00+07:00';
 export const SAMPLE_VENDOR_SHOP = 'jae-buek';
-export const SAMPLE_ORDER_ID = 'sample';
 
 const SAMPLE_DISHES_IN_QUEUE: Record<string, number> = {
   'pi-som': 2,
@@ -169,41 +168,4 @@ export function sampleOrders(shop: Shop): SampleOrder[] {
       items: [it],
     };
   });
-}
-
-export interface SampleCustomerOrder extends SampleOrder {
-  shopSlug: string;
-  shopName: string;
-  dishesAhead: number;
-  secondsPerItem: number;
-  paidAt: string;
-}
-
-/** The customer's own sample order ("my queue"). */
-export function sampleCustomerOrder(shop: Shop): SampleCustomerOrder | null {
-  const { menus, ing } = orderable(shop);
-  if (menus.length === 0) return null;
-  const it = item(menus[0], ing, 1);
-  const queueNo = 27;
-  return {
-    id: SAMPLE_ORDER_ID,
-    queueNo,
-    queueLabel: queueLabel(shop.queuePrefix, queueNo),
-    customerName: 'ฝ้าย',
-    source: 'app',
-    status: 'queued',
-    itemCount: it.qty,
-    totalSatang: it.lineTotalSatang,
-    allergyNote: null,
-    items: [it],
-    paidAt: SAMPLE_NOW,
-    queuedAt: SAMPLE_NOW,
-    startedAt: minutesFromSampleNow(3),
-    readyAt: minutesFromSampleNow(8),
-    pickedUpAt: minutesFromSampleNow(9),
-    shopSlug: shop.slug,
-    shopName: shop.name,
-    dishesAhead: 3,
-    secondsPerItem: shop.manualSecondsPerItem,
-  };
 }

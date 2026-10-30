@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useId, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { useId, useMemo, useState } from 'react';
 import { CartLine } from '@/components/CartLine';
 import { AlertIcon } from '@/components/icons';
 import { btnLarge, btnPrimary, btnSecondary, cx, input } from '@/components/ui';
@@ -15,12 +16,56 @@ import {
   MAX_NOTE_LENGTH,
   MIN_ORDER_SATANG,
   validate,
-  type Shop,
 } from '@/lib/menu';
-import { SAMPLE_ORDER_ID } from '@/lib/sample';
+import type { LoadedShop } from '@/lib/menu/db';
+import { placeOrder, type PlaceOrderError } from '@/lib/orders/actions';
+import { useLiveShop } from '@/lib/use-live-shop';
 
-export function CartView({ shop }: { shop: Shop }) {
+const ORDER_ERRORS: Record<PlaceOrderError, string> = {
+  empty: 'ตะกร้ายังว่าง',
+  bad_input: 'ข้อมูลตะกร้าไม่ถูกต้อง ลองลบแล้วเพิ่มรายการใหม่',
+  shop_closed: 'ร้านปิดรับออเดอร์ชั่วคราว',
+  unknown_menu: 'มีเมนูที่ร้านเอาออกแล้ว ลบรายการนั้นก่อน',
+  invalid_selections: 'มีรายการที่สั่งไม่ได้แล้ว (ของหมดหรือเมนูเปลี่ยน) ลบรายการนั้นก่อน',
+  pair_only_alone: 'เมนูนี้ต้องสั่งคู่กับเมนูอื่น',
+  under_minimum: 'ยอดต่ำกว่าขั้นต่ำ',
+  signed_out: 'หมดเวลาเข้าใช้งาน กรุณาใส่ชื่ออีกครั้ง',
+  shop_not_found: 'ไม่พบร้านนี้',
+  failed: 'สั่งไม่สำเร็จ ลองใหม่อีกครั้ง',
+};
+
+export function CartView({ initial }: { initial: LoadedShop }) {
+  const router = useRouter();
+  const { shop } = useLiveShop(initial).data;
+  const [placing, setPlacing] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
   const { cart, setQty, setAllergyNote } = useCart(shop.slug);
+
+  // The server reloads the menu and prices everything itself; only ids, choices, qty and notes are sent.
+  async function submit() {
+    setPlacing(true);
+    setOrderError(null);
+    const result = await placeOrder({
+      shopSlug: shop.slug,
+      lines: cart.lines.map((l) => ({
+        menuId: l.menuId,
+        selections: l.selections,
+        qty: l.qty,
+        note: l.note,
+      })),
+      allergyNote: cart.allergyNote,
+    });
+    if (result.ok) {
+      router.push(`/orders/${result.orderId}/pay`);
+      return;
+    }
+    if (result.error === 'signed_out') {
+      router.push(`/welcome?next=${encodeURIComponent(`/s/${shop.slug}/cart`)}`);
+      return;
+    }
+    setPlacing(false);
+    setOrderError(ORDER_ERRORS[result.error]);
+  }
   const allergyId = useId();
   const ingredients = useMemo(() => ingredientMap(shop.ingredients), [shop.ingredients]);
 
@@ -132,16 +177,22 @@ export function CartView({ shop }: { shop: Shop }) {
             {lines.reduce((n, l) => n + l.line.qty, 0)} จาน · ชำระเงินก่อน แล้วได้เลขคิวทันที
             <span className="text-xl font-bold text-ink">{formatBaht(total)}</span>
           </p>
-          {blocked ? (
-            <button type="button" disabled className={cx(btnPrimary, btnLarge)}>
-              ไปชำระเงิน
-            </button>
-          ) : (
-            // Phase 4: placeOrder() recomputes everything on the server, then opens the pay page.
-            <Link href={`/orders/${SAMPLE_ORDER_ID}/pay`} className={cx(btnPrimary, btnLarge)}>
-              ไปชำระเงิน
-            </Link>
+          {orderError && (
+            <p
+              role="alert"
+              className="mb-2 rounded-xl bg-danger-soft px-4 py-2.5 text-sm font-semibold text-danger"
+            >
+              {orderError}
+            </p>
           )}
+          <button
+            type="button"
+            disabled={blocked || placing}
+            onClick={submit}
+            className={cx(btnPrimary, btnLarge)}
+          >
+            {placing ? 'กำลังสั่ง…' : 'ไปชำระเงิน'}
+          </button>
         </div>
       </div>
     </>
