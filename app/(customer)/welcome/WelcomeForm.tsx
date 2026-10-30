@@ -1,11 +1,17 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useId, useRef, useState, useSyncExternalStore } from 'react';
 import { ShareIcon } from '@/components/icons';
 import { btnLarge, btnPrimary, btnSecondary, card, cx, input } from '@/components/ui';
+import { getBrowserClient } from '@/lib/supabase/client';
 
 const NAME_MAX = 30;
+
+/** Only same-site paths, so ?next= can't send people elsewhere. */
+function safeNext(next: string | null): string {
+  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+}
 
 function isIosSafariNotInstalled(): boolean {
   const ua = navigator.userAgent;
@@ -21,19 +27,42 @@ const noop = () => () => {};
 
 export function WelcomeForm() {
   const router = useRouter();
+  const next = safeNext(useSearchParams().get('next'));
   const nameRef = useRef<HTMLInputElement>(null);
   const nameId = useId();
   const [name, setName] = useState('');
   const [chulaNote, setChulaNote] = useState(false);
   const [iosPath, setIosPath] = useState<'install' | 'order' | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const ios = useSyncExternalStore(noop, isIosSafariNotInstalled, () => false);
   const trimmed = name.trim();
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (trimmed.length < 1 || trimmed.length > NAME_MAX) return;
-    // Phase 2: create the anonymous Supabase session with this display name.
-    router.push('/');
+    if (trimmed.length < 1 || trimmed.length > NAME_MAX || busy) return;
+    setBusy(true);
+    setError(null);
+    const supabase = getBrowserClient();
+    // Signed in from the browser so Supabase's per-IP limit counts each phone, not the server.
+    const { data } = await supabase.auth.getSession();
+    const result = data.session
+      ? // Renaming is the one client write allowed (column grant on display_name).
+        await supabase
+          .from('profiles')
+          .update({ display_name: trimmed })
+          .eq('id', data.session.user.id)
+          .then(async (r) =>
+            r.error ? r : await supabase.auth.updateUser({ data: { display_name: trimmed } }),
+          )
+      : await supabase.auth.signInAnonymously({ options: { data: { display_name: trimmed } } });
+    if (result.error) {
+      setBusy(false);
+      setError('เข้าใช้งานไม่สำเร็จ ลองใหม่อีกครั้ง');
+      return;
+    }
+    router.replace(next);
+    router.refresh();
   }
 
   if (ios && iosPath === 'install') {
@@ -108,8 +137,17 @@ export function WelcomeForm() {
               ร้านจะเห็นชื่อนี้คู่กับเลขคิว เช่น บึก-27 · ฝ้าย
             </p>
           </div>
-          <button type="submit" disabled={trimmed.length < 1} className={cx(btnPrimary, btnLarge)}>
-            เริ่มใช้งาน
+          {error && (
+            <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={trimmed.length < 1 || busy}
+            className={cx(btnPrimary, btnLarge)}
+          >
+            {busy ? 'กำลังเข้าใช้งาน…' : 'เริ่มใช้งาน'}
           </button>
 
           <div className="flex items-center gap-3 text-xs text-muted">

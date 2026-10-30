@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation';
 import { getShop } from '@/lib/demo-data/load';
-import { SAMPLE_VENDOR_SHOP } from '@/lib/sample';
+import { vendorPageShopSlug } from '@/lib/auth';
 import { SettingsForm } from './SettingsForm';
 
-export default function SettingsPage() {
-  const shop = getShop(SAMPLE_VENDOR_SHOP);
+export default async function SettingsPage() {
+  const shop = getShop(await vendorPageShopSlug());
   if (!shop) notFound();
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-5 pb-10">

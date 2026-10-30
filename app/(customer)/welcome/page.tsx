@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { WelcomeForm } from './WelcomeForm';
 
 export default function WelcomePage() {
@@ -8,7 +9,9 @@ export default function WelcomePage() {
       <p className="mt-1 text-sm text-muted">
         โรงอาหารคณะวิศวกรรมศาสตร์ จุฬาฯ · ระบบจะแจ้งเตือนเมื่ออาหารพร้อม
       </p>
-      <WelcomeForm />
+      <Suspense>
+        <WelcomeForm />
+      </Suspense>
     </main>
   );
 }

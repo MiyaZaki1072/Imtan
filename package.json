@@ -9,9 +9,15 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "seed": "tsx scripts/seed-from-yaml.ts",
+    "seed:accounts": "tsx --env-file=.env.local scripts/seed-accounts.ts",
+    "check:phase2": "tsx --env-file=.env.local scripts/check-phase2.ts",
+    "db:types": "supabase gen types typescript --project-id zfjndhmggindrhofueax --schema public > lib/database.types.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -27,7 +33,9 @@
     "eslint-config-next": "16.4.3",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.10",
+    "supabase": "^2.122.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.5"
   }

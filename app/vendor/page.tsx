@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation';
 import { getShop } from '@/lib/demo-data/load';
-import { sampleOrders, SAMPLE_NOW, SAMPLE_VENDOR_SHOP } from '@/lib/sample';
+import { sampleOrders, SAMPLE_NOW } from '@/lib/sample';
+import { vendorPageShopSlug } from '@/lib/auth';
 import { VendorBoard } from './VendorBoard';
 
-export default function VendorPage() {
-  const shop = getShop(SAMPLE_VENDOR_SHOP);
+export default async function VendorPage() {
+  const shop = getShop(await vendorPageShopSlug());
   if (!shop) notFound();
   return (
     <VendorBoard

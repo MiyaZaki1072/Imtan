@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { BottomNav } from '@/components/BottomNav';
+import { Greeting } from '@/components/Greeting';
 import { QrIcon } from '@/components/icons';
 import { ShopRow } from '@/components/ShopRow';
 import { card, cx } from '@/components/ui';
@@ -21,12 +22,7 @@ export default function HomePage() {
             <h1 className="text-3xl font-bold text-primary">อิ่มทัน</h1>
             <p className="mt-1 text-sm text-muted">โรงอาหารคณะวิศวกรรมศาสตร์ จุฬาฯ</p>
           </div>
-          <Link
-            href="/welcome"
-            className="mt-1 inline-flex min-h-11 items-center rounded-full bg-primary-soft px-3 text-sm font-semibold text-primary-hover"
-          >
-            สวัสดี ฝ้าย
-          </Link>
+          <Greeting />
         </header>
 
         <Link

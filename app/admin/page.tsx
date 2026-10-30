@@ -1,10 +1,21 @@
+import { Suspense } from 'react';
+import { adminPageSession } from '@/lib/auth';
 import Link from 'next/link';
 import { DemoBanner } from '@/components/DemoBanner';
 import { btnPrimary, btnSecondary, card, cx } from '@/components/ui';
 import { getShops } from '@/lib/demo-data/load';
 
-// M1 admin: demo tools, reset, CSV export, QR posters. Phase 2 adds requireAdmin().
+// M1 admin: demo tools, reset, CSV export, QR posters. Admins only.
 export default function AdminPage() {
+  return (
+    <Suspense fallback={<p className="px-4 pt-10 text-center text-muted">กำลังโหลด…</p>}>
+      <AdminPageContent />
+    </Suspense>
+  );
+}
+
+async function AdminPageContent() {
+  await adminPageSession();
   const shops = getShops();
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-10">

@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation';
 import { getShop } from '@/lib/demo-data/load';
-import { SAMPLE_VENDOR_SHOP } from '@/lib/sample';
+import { vendorPageShopSlug } from '@/lib/auth';
 import { MenuPrices } from './MenuPrices';
 
-export default function VendorMenuPage() {
-  const shop = getShop(SAMPLE_VENDOR_SHOP);
+export default async function VendorMenuPage() {
+  const shop = getShop(await vendorPageShopSlug());
   if (!shop) notFound();
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-10">

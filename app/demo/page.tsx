@@ -1,11 +1,22 @@
+import { Suspense } from 'react';
+import { adminPageSession } from '@/lib/auth';
 import { DemoBanner } from '@/components/DemoBanner';
 import { btnPrimary, btnSecondary, card, cx } from '@/components/ui';
 import { getShops } from '@/lib/demo-data/load';
 import { SAMPLE_VENDOR_SHOP } from '@/lib/sample';
 
-// Presenter view (PLAN.md §5d). Phase 6 adds the admin + DEMO_PAYMENTS=true guard
+// Presenter view (PLAN.md §5d). Admins only; Phase 6 adds the DEMO_PAYMENTS=true guard
 // and makes the controls work.
 export default function DemoPage() {
+  return (
+    <Suspense fallback={<p className="px-4 pt-10 text-center text-muted">กำลังโหลด…</p>}>
+      <DemoPageContent />
+    </Suspense>
+  );
+}
+
+async function DemoPageContent() {
+  await adminPageSession();
   const shops = getShops();
   return (
     <main className="flex flex-1 flex-col gap-4 px-4 py-4 xl:flex-row">
