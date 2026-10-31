@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { BottomNav } from '@/components/BottomNav';
 import { btnPrimary } from '@/components/ui';
-import { getSession } from '@/lib/auth';
+import { getUserId } from '@/lib/auth';
 import { getLatestOrderId } from '@/lib/orders/view';
 
 // "คิวของฉัน" in the bottom bar: jump to the newest open order.
@@ -16,9 +16,9 @@ export default function MyQueuePage() {
 }
 
 async function MyQueue() {
-  const session = await getSession();
-  if (!session) redirect('/welcome?next=/orders');
-  const id = await getLatestOrderId(session.userId);
+  const userId = await getUserId();
+  if (!userId) redirect('/welcome?next=/orders');
+  const id = await getLatestOrderId(userId);
   if (id) redirect(`/orders/${id}`);
   return (
     <>

@@ -19,47 +19,41 @@ export interface LoadedShop {
   stats: ShopLiveStats;
 }
 
-/** Unwraps a Supabase list result; an empty list comes back as []. */
-function rows<T>(
-  result: { data: T[] | null; error: { message: string } | null },
-  what: string,
-): T[] {
-  if (result.error) throw new Error(`load ${what}: ${result.error.message}`);
-  return result.data ?? [];
-}
-
 export async function loadShopBySlug(
   db: SupabaseClient<Database>,
   slug: string,
 ): Promise<LoadedShop | null> {
-  const shopResult = await db.from('shops').select('*').eq('slug', slug).maybeSingle();
+  // One round trip: the whole menu tree comes back embedded, then is flattened into the
+  // per-table lists the mapping below works on. The DB is far away, so trips dominate.
+  const shopResult = await db
+    .from('shops')
+    .select(
+      `*,
+      ingredients(id, name, is_available),
+      menus(*,
+        menu_ingredients(menu_id, ingredient_id),
+        menu_variants(menu_id, option_ids, price_satang, is_available),
+        option_groups!option_groups_menu_id_fkey(*,
+          options!options_group_id_fkey(*),
+          group_tier_prices(*)))`,
+    )
+    .eq('slug', slug)
+    .order('name', { referencedTable: 'ingredients' })
+    .order('sort', { referencedTable: 'menus' })
+    .order('sort', { referencedTable: 'menus.option_groups' })
+    .order('sort', { referencedTable: 'menus.option_groups.options' })
+    .maybeSingle();
   if (shopResult.error) throw new Error(`load shop: ${shopResult.error.message}`);
   const shopRow = shopResult.data;
   if (!shopRow) return null;
 
-  const [ingredients, menus] = await Promise.all([
-    db.from('ingredients').select('id, name, is_available').eq('shop_id', shopRow.id).order('name'),
-    db.from('menus').select('*').eq('shop_id', shopRow.id).order('sort'),
-  ]).then(([i, m]) => [rows(i, 'ingredients'), rows(m, 'menus')] as const);
-
-  const menuIds = menus.map((m) => m.id);
-  const [links, groups, variants] = await Promise.all([
-    db.from('menu_ingredients').select('menu_id, ingredient_id').in('menu_id', menuIds),
-    db.from('option_groups').select('*').in('menu_id', menuIds).order('sort'),
-    db
-      .from('menu_variants')
-      .select('menu_id, option_ids, price_satang, is_available')
-      .in('menu_id', menuIds),
-  ]).then(
-    ([l, g, v]) =>
-      [rows(l, 'menu_ingredients'), rows(g, 'option_groups'), rows(v, 'menu_variants')] as const,
-  );
-
-  const groupIds = groups.map((g) => g.id);
-  const [options, tiers] = await Promise.all([
-    db.from('options').select('*').in('group_id', groupIds).order('sort'),
-    db.from('group_tier_prices').select('*').in('group_id', groupIds),
-  ]).then(([o, t]) => [rows(o, 'options'), rows(t, 'group_tier_prices')] as const);
+  const ingredients = shopRow.ingredients;
+  const menus = shopRow.menus;
+  const links = menus.flatMap((m) => m.menu_ingredients);
+  const variants = menus.flatMap((m) => m.menu_variants);
+  const groups = menus.flatMap((m) => m.option_groups);
+  const options = groups.flatMap((g) => g.options);
+  const tiers = groups.flatMap((g) => g.group_tier_prices);
 
   const toGroup = (g: (typeof groups)[number]): OptionGroup => ({
     id: g.id,

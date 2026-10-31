@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { BottomNav } from '@/components/BottomNav';
 import { Greeting } from '@/components/Greeting';
 import { QrIcon } from '@/components/icons';
-import { getSession } from '@/lib/auth';
+import { getUserId } from '@/lib/auth';
 import { getHomeData } from '@/lib/home';
 import { HomeLive } from './HomeLive';
 
@@ -43,7 +43,7 @@ export default function HomePage() {
 }
 
 async function Live() {
-  const session = await getSession();
-  if (!session) redirect('/welcome');
-  return <HomeLive initial={await getHomeData(session.userId)} />;
+  const userId = await getUserId();
+  if (!userId) redirect('/welcome');
+  return <HomeLive initial={await getHomeData(userId)} />;
 }

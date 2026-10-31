@@ -16,11 +16,20 @@ export { AuthError, type Role, type Session } from './auth-rules';
 const ADMIN_DEFAULT_SHOP = 'jae-buek';
 const ADMIN_SHOP_COOKIE = 'imtan_admin_shop';
 
-/** The verified session for this request, or null. Cached per request. */
-export const getSession = cache(async (): Promise<Session | null> => {
+/**
+ * The signed-in user's id from the verified JWT, or null. Checked locally against the
+ * cached signing keys, so no database trip. Enough for reads scoped to the user's own
+ * rows; anything role-based or any write needs getSession() / require*().
+ */
+export const getUserId = cache(async (): Promise<string | null> => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
+  return data?.claims?.sub ?? null;
+});
+
+/** The verified session for this request, or null. Cached per request. */
+export const getSession = cache(async (): Promise<Session | null> => {
+  const userId = await getUserId();
   if (!userId) return null;
   const { data: profile } = await createAdminClient()
     .from('profiles')

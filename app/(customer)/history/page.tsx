@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { BackLink } from '@/components/BackLink';
 import { BottomNav } from '@/components/BottomNav';
 import { HistoryList } from '@/components/HistoryList';
-import { getSession } from '@/lib/auth';
+import { getUserId } from '@/lib/auth';
 import { getHistory } from '@/lib/orders/history';
 
 // Screen 10b: order history + "สั่งอีก" (PLAN.md Phase 8).
@@ -25,7 +25,7 @@ export default function HistoryPage() {
 }
 
 async function History() {
-  const session = await getSession();
-  if (!session) redirect('/welcome?next=/history');
-  return <HistoryList entries={await getHistory(session.userId, 30)} />;
+  const userId = await getUserId();
+  if (!userId) redirect('/welcome?next=/history');
+  return <HistoryList entries={await getHistory(userId, 30)} />;
 }

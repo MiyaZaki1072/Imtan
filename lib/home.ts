@@ -9,10 +9,14 @@ const SHOWN = new Set(['queued', 'cooking', 'ready', 'awaiting_payment']);
 
 /** Every shop's live queue (written only by refresh_shop_stats) plus the user's open order. */
 export async function getHomeData(userId: string): Promise<HomeData> {
-  const { data } = await createAdminClient()
-    .from('shops')
-    .select('slug, name, category, is_open, items_in_queue, est_wait_seconds, busy_level')
-    .order('name');
+  // The shop list and the user's order chain don't depend on each other: run them together.
+  const [{ data }, order] = await Promise.all([
+    createAdminClient()
+      .from('shops')
+      .select('slug, name, category, is_open, items_in_queue, est_wait_seconds, busy_level')
+      .order('name'),
+    getLatestOrderId(userId).then((id) => (id ? getOrderView(id, userId) : null)),
+  ]);
 
   const shops: HomeData['shops'] = (data ?? []).map((s) => ({
     slug: s.slug,
@@ -25,8 +29,6 @@ export async function getHomeData(userId: string): Promise<HomeData> {
   }));
 
   let mine: HomeData['mine'] = null;
-  const orderId = await getLatestOrderId(userId);
-  const order = orderId ? await getOrderView(orderId, userId) : null;
   if (order && SHOWN.has(order.status)) {
     mine = {
       orderId: order.id,
