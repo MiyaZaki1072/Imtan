@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Imtan brag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=block" rel="stylesheet">
+<style>
+:root{
+  --primary:#c2410c;--primary-hover:#9a3412;--primary-soft:#fde7d8;
+  --bg:#faf8f5;--surface:#fff;--border:#e7e2dc;--ink:#1c1b1a;--muted:#57534e;
+  --success:#15803d;--success-soft:#dcfce7;--warning:#b45309;--warning-soft:#fef3c7;
+  --danger:#b91c1c;--danger-soft:#fee2e2;--info-soft:#eef2f7;--info-ink:#1e3a5f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg);color:var(--ink);
+  font-family:'IBM Plex Sans Thai',ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+#stage{position:relative;width:1920px;height:1080px;overflow:hidden;background:var(--bg)}
+#glow{position:absolute;inset:0;background:radial-gradient(1200px 700px at 72% 55%,#fde7d8 0%,rgba(253,231,216,0) 70%)}
+
+.card{border-radius:16px;border:1px solid var(--border);background:var(--surface)}
+.pill{display:inline-flex;min-width:64px;align-items:center;justify-content:center;border-radius:999px;padding:4px 12px;font-size:14px;font-weight:600;line-height:20px;white-space:nowrap}
+.p-free{background:var(--success);color:#fff}
+.p-mid{background:var(--warning-soft);color:var(--warning);box-shadow:inset 0 0 0 1px rgba(180,83,9,.4)}
+.p-full{background:var(--danger);color:#fff}
+.p-unk{background:var(--border);color:var(--muted)}
+.muted{color:var(--muted)}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;font-weight:600;font-size:16px;min-height:44px;padding:0 20px;white-space:nowrap}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-success{background:var(--success);color:#fff}
+.btn-warning{background:var(--warning);color:#fff}
+.btn-secondary{background:var(--surface);border:1px solid var(--border);color:var(--ink)}
+
+#hook{position:absolute;inset:0}
+#clock{position:absolute;left:150px;top:250px;font-size:250px;line-height:1;font-weight:700;color:var(--primary);letter-spacing:-6px;transform-origin:0% 60%}
+#hookLineA,#hookLineB{position:absolute;left:156px;top:560px;font-size:64px;font-weight:700;line-height:1.25;width:800px}
+#hookLineB span{color:var(--primary)}
+#hookSub{position:absolute;left:158px;top:670px;font-size:30px;color:var(--muted);width:760px}
+#hookRows{position:absolute;left:1010px;top:170px;width:760px}
+.hrow{display:flex;align-items:center;gap:18px;padding:18px 26px;margin-bottom:18px;border-radius:22px;border:1.5px solid var(--border);background:#fff}
+.hrow .nm{font-size:30px;font-weight:600;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hrow .ln{font-size:22px;color:var(--muted);margin-top:2px}
+.hrow .pillbox{position:relative;width:130px;height:46px;flex:none}
+.hrow .pill{position:absolute;inset:0;font-size:22px;min-width:0;padding:0}
+
+.cap{position:absolute;left:150px;width:860px}
+.cap h2{font-size:76px;line-height:1.2;font-weight:700;letter-spacing:-1px}
+.cap h2 em{font-style:normal;color:var(--primary)}
+.cap p{margin-top:26px;font-size:30px;color:var(--muted);line-height:1.5}
+.tag{display:inline-block;margin-bottom:26px;font-size:26px;font-weight:600;color:var(--primary-hover);background:var(--primary-soft);border-radius:999px;padding:6px 22px;letter-spacing:0}
+
+#phone{position:absolute;left:1180px;top:104px;width:418px;height:872px;transform-origin:50% 50%}
+#phoneFrame{position:absolute;inset:0;border-radius:60px;background:#1c1b1a;box-shadow:0 40px 80px rgba(154,52,18,.18),0 10px 30px rgba(28,27,26,.15)}
+#screen{position:absolute;left:14px;top:14px;width:390px;height:844px;border-radius:46px;overflow:hidden;background:var(--bg)}
+#island{position:absolute;left:50%;top:12px;width:110px;height:32px;margin-left:-55px;border-radius:20px;background:#000;z-index:50}
+.status{position:absolute;left:0;right:0;top:0;height:50px;display:flex;align-items:center;justify-content:space-between;padding:6px 32px 0 40px;font-size:15px;font-weight:600;z-index:40}
+.scr{position:absolute;inset:0;background:var(--bg)}
+.scr-in{position:absolute;left:0;right:0;top:50px;bottom:0;padding:14px 16px 0}
+.nav{position:absolute;left:0;right:0;bottom:0;height:74px;background:#fff;border-top:1px solid var(--border);display:flex;justify-content:space-around;padding-top:14px;font-size:14px;color:var(--muted);z-index:30}
+.nav .on{color:var(--primary);font-weight:700}
+.srow{display:flex;align-items:center;gap:12px;padding:7px 16px;margin-bottom:7px}
+.srow .nm{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow .ct{font-size:12px;color:var(--muted)}
+.srow .ln{font-size:14px;color:var(--muted);margin-top:2px}
+.mcard{display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:10px;width:100%}
+.plus{position:relative;display:inline-flex;width:44px;height:44px;flex:none;align-items:center;justify-content:center;border-radius:12px;border:1px solid var(--border);font-size:24px;line-height:1}
+.badge{position:absolute;top:-8px;right:-8px;min-width:24px;height:24px;border-radius:999px;background:var(--primary);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+#dim{position:absolute;inset:0;background:rgba(28,27,26,.45);z-index:20}
+#sheet{position:absolute;left:0;right:0;bottom:0;height:650px;background:#fff;border-radius:28px 28px 0 0;z-index:21;padding:14px 18px 0}
+.grip{width:40px;height:5px;border-radius:9px;background:var(--border);margin:0 auto 12px}
+.opt{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;border:1px solid var(--border);border-radius:12px;margin-bottom:7px;font-size:16px}
+.opt .box{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700}
+.opt.on{border-color:var(--primary);background:var(--primary-soft)}
+.opt.on .box{background:var(--primary);border-color:var(--primary)}
+.opt .pr{margin-left:auto;color:var(--muted);font-size:14px}
+.gh{display:flex;justify-content:space-between;align-items:baseline;margin:12px 0 8px}
+.gh b{font-size:16px}.gh span{font-size:12px;color:var(--muted)}
+.stat{border-radius:12px;background:var(--bg);padding:10px 8px;text-align:center}
+.stat p:first-child{font-size:12px;color:var(--muted)}
+.stat p:last-child{font-size:24px;font-weight:700;margin-top:2px}
+.step{display:flex;gap:10px;align-items:center;font-size:15px;margin-top:11px}
+.step i{font-style:normal;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex:none}
+#scrReady{background:var(--success);color:#fff;text-align:center}
+.ring{position:absolute;left:0;top:0;width:112px;height:112px;border-radius:50%;border:3px solid rgba(255,255,255,.7)}
+
+#tablet{position:absolute;left:180px;top:250px;width:1560px;height:800px;transform-origin:50% 50%}
+#tabFrame{position:absolute;inset:0;border-radius:44px;background:#1c1b1a;box-shadow:0 40px 90px rgba(154,52,18,.18),0 12px 30px rgba(28,27,26,.15)}
+#tabScreen{position:absolute;left:18px;top:18px;width:1524px;height:764px;border-radius:28px;overflow:hidden;background:#f3f1ee}
+#board{position:absolute;left:0;top:0;width:2000px;height:1003px;transform:scale(.762);transform-origin:0 0}
+#bHead{position:absolute;left:0;right:0;top:0;height:170px;background:#fff;border-bottom:1px solid var(--border);padding:30px 48px}
+#bHead h1{font-size:40px;font-weight:700;line-height:1.4}
+#bHead h1 span{font-size:28px;color:var(--primary);font-weight:600}
+#bHead p{font-size:25px;color:var(--muted);margin-top:4px}
+#bBtns{position:absolute;right:48px;top:40px;display:flex;gap:18px}
+#bBtns .btn{font-size:28px;min-height:88px;border-radius:22px;padding:0 34px}
+.col{position:absolute;top:206px;width:612px;height:770px;border-radius:26px;background:#fff;border:1px solid var(--border)}
+.col h3{position:absolute;left:28px;top:24px;font-size:32px;font-weight:700}
+.col .cnt{position:absolute;right:28px;top:28px;min-width:52px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;background:#f3f1ee}
+.vcard{position:absolute;width:556px;height:208px;border-radius:24px;border:2px solid var(--border);background:#fff;padding:18px 26px;transform-origin:50% 50%}
+.vcard .hd{display:flex;justify-content:space-between;align-items:baseline}
+.vcard .ql{font-size:34px;font-weight:700}
+.vcard .ql span{font-size:24px;font-weight:600;color:var(--muted)}
+.vcard .meta{font-size:20px;color:var(--muted)}
+.vcard .it{font-size:24px;font-weight:600;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vcard .it .x{color:var(--primary)}
+.vcard .it .sl{color:var(--muted);font-weight:500}
+.vcard .bt{position:absolute;left:26px;right:26px;bottom:18px}
+.vcard .bt .btn{min-height:66px;font-size:26px;border-radius:16px}
+.vcard.cooking{border-color:rgba(180,83,9,.6)}
+.vcard.ready{border-color:rgba(21,128,61,.4);background:#effcf3}
+.vcard.ready .meta{color:var(--success)}
+.vcard.new{box-shadow:0 0 0 6px rgba(194,65,12,.2)}
+
+#tap{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(28,27,26,.24);border:3px solid rgba(255,255,255,.95);box-shadow:0 4px 14px rgba(0,0,0,.2);z-index:100}
+#tapRing{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;border:3px solid rgba(194,65,12,.7);z-index:99}
+
+#outro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+#oIcon{width:140px;height:140px;border-radius:34px;box-shadow:0 20px 50px rgba(154,52,18,.25)}
+#oName{font-size:180px;font-weight:700;color:var(--primary);line-height:1.4;margin-top:40px}
+#oLine{font-size:60px;font-weight:700;margin-top:-10px}
+#oSub{font-size:30px;color:var(--muted);margin-top:22px}
+</style>
+</head>
+<body>
+<div id="stage">
+<div id="glow"></div>
+
+<div id="hook">
+  <div id="clock">12:00</div>
+  <div id="hookLineA">Which line is shortest?</div>
+  <div id="hookLineB"><span>อิ่มทัน</span> knows. Live.</div>
+  <div id="hookSub">Chula Engineering canteen · iCanteen</div>
+  <div id="hookRows"></div>
+</div>
+
+<div class="cap" id="cap1" style="top:320px">
+  <div class="tag">For students</div>
+  <h2>Every shop's queue<br>&amp; wait time, <em>live.</em></h2>
+  <p>คิวแต่ละร้านตอนนี้ · อัปเดตแบบเรียลไทม์</p>
+</div>
+<div class="cap" id="cap2" style="top:320px">
+  <div class="tag">For students</div>
+  <h2>Order &amp; pay<br><em>from your phone.</em></h2>
+  <p>สแกน QR หน้าร้าน · รับคิวและสั่งอาหารได้ทันที</p>
+</div>
+<div class="cap" id="cap3" style="top:320px">
+  <div class="tag">For students</div>
+  <h2>Then sit down.<br><em>No standing in line.</em></h2>
+  <p>ไม่ต้องยืนรอหน้าร้าน ไปนั่งรอหรือทำธุระอื่นได้เลย</p>
+</div>
+<div class="cap" id="cap4" style="top:58px;left:0;width:1920px;text-align:center">
+  <h2 style="font-size:66px"><span class="tag" style="vertical-align:middle;margin:0 20px 0 0">For vendors</span>Every order on one board. <em>Nothing forgotten.</em></h2>
+  <p style="margin-top:6px">กระดานออเดอร์ · รอทำ → กำลังทำ → พร้อมรับ</p>
+</div>
+<div class="cap" id="cap5" style="top:360px">
+  <h2>Food's ready?<br><em>Your phone buzzes.</em></h2>
+  <p>อาหารพร้อมแล้ว! · มีเสียงและสั่นเตือน</p>
+</div>
+
+<div id="phone">
+  <div id="phoneFrame"></div>
+  <div id="screen">
+    <div id="island"></div>
+    <div class="status" id="statusBar"><span>12:00</span><span>5G ▮</span></div>
+
+    <div class="scr" id="scrHome">
+      <div class="scr-in">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:4px">
+          <div><div style="font-size:30px;font-weight:700;color:var(--primary);line-height:1.4">อิ่มทัน</div>
+          <div class="muted" style="font-size:14px">โรงอาหารคณะวิศวกรรมศาสตร์ จุฬาฯ</div></div>
+          <div style="margin-top:6px;border-radius:999px;background:var(--primary-soft);padding:10px 12px;font-size:14px;font-weight:600;color:var(--primary-hover)">สวัสดี ต้น</div>
+        </div>
+        <div style="margin-top:12px;display:flex;align-items:center;gap:16px;border-radius:16px;background:var(--primary);padding:12px 20px;color:#fff">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 17v4"/></svg>
+          <div><div style="font-size:20px;font-weight:700">สแกน QR หน้าร้าน</div><div style="font-size:13px;opacity:.9">รับคิวและสั่งอาหารได้ทันที ไม่ต้องติดตั้งแอป</div></div>
+        </div>
+        <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:baseline">
+          <div style="font-size:18px;font-weight:700">คิวแต่ละร้านตอนนี้</div><div class="muted" style="font-size:12px">อัปเดตแบบเรียลไทม์</div>
+        </div>
+        <div id="homeRows" style="margin-top:10px"></div>
+      </div>
+      <div class="nav"><span class="on">หน้าแรก</span><span>สแกน QR</span><span>คิวของฉัน</span></div>
+    </div>
+
+    <div class="scr" id="scrShop">
+      <div class="scr-in">
+        <div style="font-size:14px;font-weight:600;color:var(--primary);min-height:30px">‹ หน้าแรก</div>
+        <div style="font-size:24px;font-weight:700;line-height:1.4">ไก่กรอบ ซอย 9 พี่ส้ม</div>
+        <div class="muted" style="font-size:14px">ข้าวราดของทอด</div>
+        <div class="card" style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;padding:14px 16px">
+          <div style="font-size:14px" class="muted">2 จานในคิว · รอประมาณ 3 นาที</div><span class="pill p-free">ว่าง</span>
+        </div>
+        <div style="margin-top:20px;font-size:18px;font-weight:700">ข้าวราด</div>
+        <div style="margin-top:10px">
+          <div class="card mcard" id="menuA"><div style="flex:1"><div style="font-weight:600">ข้าวราด เลือกโปรตีน</div><div class="muted" style="font-size:14px;margin-top:2px">ใช้เวลาทำ ~2 นาที · เริ่ม ฿50</div></div><span class="plus">+<span class="badge" id="badgeA">1</span></span></div>
+          <div class="card mcard"><div style="flex:1"><div style="font-weight:600">โปรตีนอย่างเดียว (ไม่เอาข้าว)</div><div class="muted" style="font-size:14px;margin-top:2px">ใช้เวลาทำ ~2 นาที · เริ่ม ฿45</div></div><span class="plus">+</span></div>
+        </div>
+      </div>
+      <div id="dim"></div>
+      <div id="sheet">
+        <div class="grip"></div>
+        <div style="font-size:22px;font-weight:700;line-height:1.4">ข้าวราด เลือกโปรตีน</div>
+        <div class="muted" style="font-size:14px">ใช้เวลาทำ ~2 นาที</div>
+        <div class="gh"><b>โปรตีน</b><span>1 อย่าง ฿50 · 2 อย่าง ฿60</span></div>
+        <div class="opt" id="optA"><span class="box">✓</span>ไก่กรอบ</div>
+        <div class="opt"><span class="box"></span>ปลาทอด</div>
+        <div class="opt"><span class="box"></span>หมูญี่ปุ่น</div>
+        <div class="opt"><span class="box"></span>หมูบาบีคิว</div>
+        <div class="gh"><b>ราดเพิ่ม</b><span>ไม่บังคับ · เลือกได้สูงสุด 2</span></div>
+        <div class="opt" id="optB"><span class="box">✓</span>ไข่ข้น<span class="pr">+฿10</span></div>
+        <div class="opt"><span class="box"></span>แกงกะหรี่<span class="pr">+฿10</span></div>
+        <div class="btn btn-primary" id="addBtn" style="position:absolute;left:18px;right:18px;bottom:24px;min-height:56px;font-size:18px">เพิ่มลงตะกร้า · <span id="addPrice">฿50</span></div>
+      </div>
+    </div>
+
+    <div class="scr" id="scrPay">
+      <div class="scr-in">
+        <div style="font-size:14px;font-weight:600;color:var(--primary);min-height:30px">‹ กลับไปที่ตะกร้า</div>
+        <div style="font-size:24px;font-weight:700">ชำระเงิน</div>
+        <div class="card" style="margin-top:12px;padding:18px;text-align:center">
+          <div class="muted" style="font-size:14px">ยอดที่ต้องชำระ</div>
+          <div style="font-size:44px;font-weight:700;color:var(--primary);line-height:1.3">฿60</div>
+          <div class="muted" style="font-size:13px">ชำระเงินผ่านพร้อมเพย์ (ตัวอย่าง)</div>
+          <svg id="qr" width="180" height="180" viewBox="0 0 29 29" style="margin-top:12px" shape-rendering="crispEdges"></svg>
+        </div>
+        <div class="card" style="margin-top:12px;padding:12px 16px;font-size:14px">
+          <div class="muted" style="font-size:12px">รายการที่สั่ง · ไก่กรอบ ซอย 9 พี่ส้ม</div>
+          <div style="font-weight:600;margin-top:2px">ข้าวราด เลือกโปรตีน / ไก่กรอบ / ไข่ข้น × 1</div>
+        </div>
+        <div class="btn btn-primary" id="payBtn" style="margin-top:14px;min-height:56px;font-size:18px">ชำระเงิน (จำลอง)</div>
+      </div>
+    </div>
+
+    <div class="scr" id="scrTicket">
+      <div class="scr-in">
+        <div style="border-radius:14px;background:var(--success-soft);color:var(--success);font-weight:700;padding:12px 16px;font-size:16px;margin-top:4px">✓ ชำระเงินแล้ว ได้คิวแล้ว!</div>
+        <div class="card" style="margin-top:12px;padding:20px 20px;text-align:center">
+          <div class="muted" style="font-size:14px">ไก่กรอบ ซอย 9 พี่ส้ม · เลขคิวของคุณ</div>
+          <div id="qLabel" style="margin-top:6px;font-size:62px;line-height:1.4;font-weight:700;color:var(--primary);letter-spacing:-1px">ส้ม-27</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+            <div class="stat"><p>จานก่อนหน้าคุณ</p><p>2</p></div>
+            <div class="stat"><p>รอประมาณ</p><p>~5 นาที</p></div>
+          </div>
+        </div>
+        <div style="margin-top:12px;border-radius:14px;background:var(--info-soft);color:var(--info-ink);padding:12px 16px;font-size:14px;line-height:1.6">ไม่ต้องยืนรอหน้าร้าน ไปนั่งรอหรือทำธุระอื่นได้เลย ระบบจะเรียกเมื่ออาหารพร้อม</div>
+        <div class="card" style="margin-top:12px;padding:4px 16px 14px">
+          <div class="step"><i style="background:var(--success);color:#fff">✓</i><b>ชำระเงินแล้ว · ร้านรับออเดอร์</b></div>
+          <div class="step"><i style="background:var(--warning);color:#fff">2</i><b>อยู่ในคิว (ตอนนี้)</b></div>
+          <div class="step muted"><i style="border:2px solid var(--border)">3</i>กำลังทำ</div>
+          <div class="step muted"><i style="border:2px solid var(--border)">4</i>อาหารพร้อม</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scr" id="scrReady">
+      <div style="position:absolute;left:24px;right:24px;top:170px">
+        <div style="position:relative;width:112px;height:112px;margin:0 auto">
+          <div class="ring" id="ring1"></div><div class="ring" id="ring2"></div>
+          <div style="position:absolute;inset:0;border-radius:50%;background:#fff;color:var(--success);display:flex;align-items:center;justify-content:center;font-size:60px;font-weight:700">✓</div>
+        </div>
+        <div style="margin-top:56px;font-size:36px;font-weight:700;line-height:1.4">อาหารพร้อมแล้ว!</div>
+        <div style="margin-top:8px;font-size:20px">คิว <b style="font-size:26px">ส้ม-27</b> · ไก่กรอบ ซอย 9 พี่ส้ม</div>
+        <div style="margin-top:8px;font-size:15px;opacity:.9">ข้าวราด เลือกโปรตีน / ไก่กรอบ / ไข่ข้น × 1</div>
+        <div style="margin-top:24px;border-radius:16px;background:#fff;color:var(--success);font-weight:600;padding:12px 16px;font-size:15px">แสดงเลขคิวนี้ให้แม่ค้าเพื่อรับอาหาร · ชำระเงินแล้ว</div>
+      </div>
+      <div style="position:absolute;left:24px;right:24px;bottom:56px">
+        <div class="btn" style="background:#fff;color:var(--success);min-height:56px;font-size:18px;font-weight:700;border-radius:16px">ได้รับอาหารแล้ว</div>
+        <div style="margin-top:12px;font-size:13px;opacity:.85">ถ้ายังไม่มารับ แม่ค้ากด "เรียกซ้ำ" เพื่อเตือนอีกครั้งได้</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tablet">
+  <div id="tabFrame"></div>
+  <div id="tabScreen">
+    <div id="board">
+      <div id="bHead">
+        <h1>ไก่กรอบ ซอย 9 พี่ส้ม <span>· อิ่มทัน สำหรับร้านค้า</span></h1>
+        <p id="bSub"></p>
+        <div id="bBtns"><div class="btn btn-primary">+1 คิวหน้าร้าน</div><div class="btn btn-secondary">เมนู/ราคา</div><div class="btn btn-secondary">ตั้งค่าร้าน</div></div>
+      </div>
+      <div class="col" style="left:48px"><h3>รอทำ</h3><div class="cnt" id="cnt0">0</div></div>
+      <div class="col" style="left:694px"><h3>กำลังทำ</h3><div class="cnt" id="cnt1" style="background:var(--warning-soft);color:var(--warning)">2</div></div>
+      <div class="col" style="left:1340px"><h3>พร้อมรับ (แจ้งแล้ว)</h3><div class="cnt" id="cnt2" style="background:var(--success-soft);color:var(--success)">1</div></div>
+      <div id="cards"></div>
+    </div>
+  </div>
+</div>
+
+<div id="outro">
+  <img id="oIcon" src="icon-512.png" alt="">
+  <div id="oName">อิ่มทัน</div>
+  <div id="oLine">Scan. Order. <span style="color:var(--primary)">Eat on time.</span></div>
+  <div id="oSub">สแกน QR หน้าร้าน · ไม่ต้องติดตั้งแอป · โรงอาหารคณะวิศวกรรมศาสตร์ จุฬาฯ</div>
+</div>
+
+<div id="tapRing"></div>
+<div id="tap"></div>
+</div>
+
+<script>
+const SHOPS = [
+  {nm:'เจ๊บึก', ct:'อาหารตามสั่ง', d:9, w:14, b:'full'},
+  {nm:'ก๋วยเตี๋ยวต้มยำ ไก่ตุ๋น ข้าวหมูแดง', ct:'ก๋วยเตี๋ยว / ข้าวหมูแดง', d:5, w:8, b:'mid'},
+  {nm:'ก๋วยเตี๋ยวน้ำตก', ct:'ก๋วยเตี๋ยว / โจ๊ก', d:4, w:6, b:'mid'},
+  {nm:'เหนียวไก่วิศวะจุฬา', ct:'อาหารอีสาน', d:3, w:4, b:'free'},
+  {nm:'ไก่กรอบ ซอย 9 พี่ส้ม', ct:'ข้าวราดของทอด', d:2, w:3, b:'free'},
+];
+const BUSY = {free:'ว่าง', mid:'ปานกลาง', full:'แน่น'};
+const $ = id => document.getElementById(id);
+
+SHOPS.forEach((s,i)=>{
+  $('hookRows').insertAdjacentHTML('beforeend',`<div class="hrow" id="hr${i}"><div style="flex:1;min-width:0"><div class="nm">${s.nm}</div>
+  <div class="ln"><span class="lq">? จานในคิว · รอประมาณ ? นาที</span><span class="la" style="display:none">${s.d} จานในคิว · รอประมาณ ${s.w} นาที</span></div></div>
+  <div class="pillbox"><span class="pill p-unk q">?</span><span class="pill p-${s.b} a">${BUSY[s.b]}</span></div></div>`);
+  $('homeRows').insertAdjacentHTML('beforeend',`<div class="card srow" id="sr${i}"><div style="flex:1;min-width:0"><div class="nm">${s.nm}</div><div class="ct">${s.ct}</div>
+  <div class="ln" id="srl${i}">${s.d} จานในคิว · รอประมาณ ${s.w} นาที</div></div><span class="pill p-${s.b}">${BUSY[s.b]}</span></div>`);
+});
+
+(function(){const q=$('qr');let h='<rect width="29" height="29" fill="#fff"/>';let x=7;
+ const rnd=()=>{x=(x*1103515245+12345)&0x7fffffff;return x/0x7fffffff};
+ const finder=(cx,cy)=>{h+=`<rect x="${cx}" y="${cy}" width="7" height="7" fill="#1c1b1a"/><rect x="${cx+1}" y="${cy+1}" width="5" height="5" fill="#fff"/><rect x="${cx+2}" y="${cy+2}" width="3" height="3" fill="#1c1b1a"/>`};
+ for(let i=1;i<28;i++)for(let j=1;j<28;j++){const inF=(i<9&&j<9)||(i>19&&j<9)||(i<9&&j>19);if(!inF&&rnd()<.48)h+=`<rect x="${i}" y="${j}" width="1" height="1" fill="#1c1b1a"/>`}
+ finder(1,1);finder(21,1);finder(1,21);q.innerHTML=h;})();
+
+const CARD = {
+  24:{who:'โอ๊ต', item:['ข้าวราด เลือกโปรตีน','หมูบาบีคิว'], src:'หน้าร้าน · 11:56'},
+  25:{who:'มิว', item:['ข้าวราด เลือกโปรตีน','ปลาทอด','แกงกะหรี่'], src:'สั่งผ่านแอป · 11:57', start:'11:58'},
+  26:{who:'แบม', item:['โปรตีนอย่างเดียว (ไม่เอาข้าว)','ไก่ทอดเกาหลี'], src:'สั่งผ่านแอป · 11:58', start:'11:59'},
+  27:{who:'ต้น', item:['ข้าวราด เลือกโปรตีน','ไก่กรอบ','ไข่ข้น'], src:'สั่งผ่านแอป · 12:00', start:'12:00'},
+};
+// [time, status(0 queued,1 cooking,2 ready), slot]
+const TL = {
+  24:[[0,2,0],[13.0,2,1],[14.5,2,2]],
+  25:[[0,1,0],[13.0,2,0],[14.5,2,1]],
+  26:[[0,1,1],[13.0,1,0]],
+  27:[[12.5,0,0],[13.5,1,1],[14.5,2,0]],
+};
+for (const id in CARD) {
+  const c = CARD[id];
+  const it = c.item.map((p,i)=>(i?'<span class="sl"> / </span>':'')+p).join('');
+  $('cards').insertAdjacentHTML('beforeend',`<div class="vcard" id="vc${id}">
+   <div class="hd"><div class="ql">ส้ม-${id} <span>· ${c.who}</span></div><div class="meta" id="vm${id}"></div></div>
+   <div class="it">${it} <span class="x">× 1</span></div>
+   <div class="bt" id="vb${id}"></div></div>`);
+}
+const BTN = {
+  0:'<div style="grid-template-columns:3fr 2fr;display:grid;gap:14px"><div class="btn btn-warning">เริ่มทำ</div><div class="btn btn-secondary" style="border-color:rgba(21,128,61,.5);color:var(--success)">เสร็จแล้ว</div></div>',
+  1:'<div class="btn btn-success">เสร็จแล้ว – แจ้งลูกค้า</div>',
+  2:'<div style="grid-template-columns:1fr 1fr;display:grid;gap:14px"><div class="btn btn-secondary" style="border-color:var(--success);color:var(--success)">ลูกค้ารับแล้ว</div><div class="btn btn-secondary">เรียกซ้ำ</div></div>',
+};
+const COLX = [48+28, 694+28, 1340+28], ROWY0 = 206+92, ROWH = 224;
+
+const clamp = (v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const lin = (t,a,b)=>clamp((t-a)/(b-a));
+const eo = x => 1-Math.pow(1-x,3);
+const eio = x => x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const back = x => {const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)};
+const seg = (t,a,b,f=eo)=>f(lin(t,a,b));
+function st(el, o, tr){ if(typeof el==='string') el=$(el); el.style.opacity=o; el.style.visibility=o<=0.001?'hidden':'visible'; if(tr!==undefined) el.style.transform=tr; }
+function caption(id,t,a,b){
+  const i=seg(t,a,a+.45), o=lin(t,b-.25,b);
+  const op = (t<a||t>b)?0:Math.min(i,1-o);
+  st(id, op, `translateY(${(1-i)*40 - o*24}px)`);
+}
+
+const TAPS = [
+  [7.0, ()=>$('sr4')], [8.5, ()=>$('menuA')], [9.0, ()=>$('optA')], [9.5, ()=>$('optB')],
+  [10.0, ()=>$('addBtn')], [10.5, ()=>$('payBtn')],
+  [13.0, ()=>$('vb25').querySelector('.btn')], [13.5, ()=>$('vb27').querySelector('.btn')], [14.5, ()=>$('vb27').querySelector('.btn')],
+];
+function tapAt(t){
+  let best=null;
+  for (const tp of TAPS) if (t>=tp[0]-.22 && t<=tp[0]+.35) best=tp;
+  const tap=$('tap'), ring=$('tapRing');
+  if(!best){ st(tap,0); st(ring,0); return; }
+  const [tt,g]=best; const r=g().getBoundingClientRect();
+  const x=r.left+r.width*.6, y=r.top+r.height*.55;
+  for (const e of [tap,ring]){ e.style.left=x+'px'; e.style.top=y+'px'; }
+  const pre = seg(t,tt-.22,tt-.04), press = t>=tt-.04 && t<tt+.12, out = lin(t,tt+.12,tt+.35);
+  st(tap, pre*(1-out), `scale(${press?0.78:1-0.1*out})`);
+  const rr = lin(t,tt,tt+.35);
+  st(ring, t>=tt ? (1-rr)*.9 : 0, `scale(${1+rr*1.4})`);
+}
+const pressScale=(t,tt)=> (t>=tt-.04 && t<tt+.14) ? 0.97 : 1;
+
+function render(t){
+  // ---- hook 0-4 ----
+  const hookOut = lin(t,3.72,4.0);
+  st('hook', t<4.0 ? 1-hookOut : 0, `translateY(${-hookOut*30}px)`);
+  st('clock', lin(t,0,.1), `scale(${0.6+0.4*seg(t,0,.32,back)})`);
+  const aIn=seg(t,.3,.65), aOut=lin(t,1.8,1.98);
+  st('hookLineA', Math.min(aIn,1-aOut), `translateY(${(1-aIn)*30-aOut*20}px)`);
+  const bIn=seg(t,2.0,2.35);
+  st('hookLineB', bIn, `translateY(${(1-bIn)*30}px)`);
+  const sIn=seg(t,.6,1.0);
+  st('hookSub', sIn, `translateY(${(1-sIn)*20}px)`);
+  SHOPS.forEach((s,i)=>{
+    const a=.5+i*.25, e=seg(t,a,a+.35,back);
+    const row=$('hr'+i);
+    st(row, lin(t,a,a+.18), `translateX(${(1-e)*80}px)`);
+    const q=row.querySelector('.q'), an=row.querySelector('.a');
+    const f=2.0+i*.1, flipped=t>=f+.15;
+    q.style.opacity=flipped?0:1; q.style.transform=`scaleY(${1-lin(t,f,f+.15)})`;
+    an.style.opacity=flipped?1:0; an.style.transform=`scaleY(${eo(lin(t,f+.15,f+.32))})`;
+    row.querySelector('.lq').style.display = flipped?'none':'inline';
+    row.querySelector('.la').style.display = flipped?'inline':'none';
+    if(i===4){ const h=seg(t,2.8,3.1); row.style.borderColor = h>0?`rgba(194,65,12,${0.25+0.75*h})`:''; row.style.boxShadow = h>0?`0 0 0 ${7*h}px rgba(194,65,12,.15)`:'none'; }
+  });
+
+  // ---- captions ----
+  caption('cap1',t,4.1,7.85);
+  caption('cap2',t,8.05,10.75);
+  caption('cap3',t,10.85,11.85);
+  caption('cap4',t,12.05,15.85);
+  caption('cap5',t,16.1,17.85);
+
+  // ---- phone ----
+  let pOp=0, pX=0, pS=1, pR=0;
+  if (t>=4.0 && t<12.0){ const i=seg(t,4.0,4.5), o=lin(t,11.72,12.0); pOp=Math.min(1,i*1.4)*(1-o); pX=(1-i)*260+o*o*220; pR=(1-i)*5; }
+  if (t>=16.0 && t<18.0){ const i=seg(t,16.0,16.38,back), o=lin(t,17.75,18.0); pOp=lin(t,16,16.12)*(1-o); pS=0.85+0.15*i-o*.05;
+    const bz=(t>16.4&&t<16.9)||(t>17.0&&t<17.4); pR = bz? Math.sin(t*2*Math.PI*14)*1.4 : 0; }
+  st('phone',pOp,`translateX(${pX}px) rotate(${pR}deg) scale(${pS})`);
+
+  const homeOut = seg(t,7.6,7.95,eio);
+  st('scrHome', t<7.95?1:0, `translateX(${-homeOut*30}%)`);
+  $('sr4').style.transform=`scale(${pressScale(t,7.0)})`;
+  $('srl0').textContent = t<5.0 ? '9 จานในคิว · รอประมาณ 14 นาที' : '10 จานในคิว · รอประมาณ 15 นาที';
+  $('srl2').textContent = t<6.0 ? '4 จานในคิว · รอประมาณ 6 นาที' : '3 จานในคิว · รอประมาณ 5 นาที';
+  const fl0 = 1-lin(t,5.0,5.7), fl2=1-lin(t,6.0,6.7);
+  $('sr0').style.background = t>=5.0?`rgba(253,231,216,${fl0})`:'#fff';
+  $('sr2').style.background = t>=6.0?`rgba(253,231,216,${fl2})`:'#fff';
+  $('sr4').style.borderColor = (t>=6.8&&t<7.6)?'rgba(194,65,12,.5)':'';
+
+  const shopIn = seg(t,7.6,7.95,eio), shopOut = seg(t,10.05,10.3,eio);
+  st('scrShop', (t>=7.6&&t<10.3)?1:0, `translateX(${(1-shopIn)*100 - shopOut*30}%)`);
+  $('menuA').style.transform=`scale(${pressScale(t,8.5)})`;
+  $('badgeA').style.display = t>=10.0?'flex':'none';
+  const sh = seg(t,8.6,8.92), shDown = seg(t,10.0,10.2,x=>x*x);
+  $('sheet').style.transform=`translateY(${(1-sh)*100 + shDown*100}%)`;
+  $('sheet').style.visibility = (t>=8.6&&t<10.2)?'visible':'hidden';
+  st('dim', (t>=8.6&&t<10.2)? sh*(1-shDown) : 0);
+  $('optA').classList.toggle('on', t>=9.0);
+  $('optB').classList.toggle('on', t>=9.5);
+  $('optA').style.transform=`scale(${pressScale(t,9.0)})`;
+  $('optB').style.transform=`scale(${pressScale(t,9.5)})`;
+  $('addPrice').textContent = t>=9.5 ? '฿60' : '฿50';
+  $('addBtn').style.transform=`scale(${pressScale(t,10.0)})`;
+
+  const payIn = seg(t,10.05,10.3,eio), payOut=seg(t,10.65,10.9,eio);
+  st('scrPay', (t>=10.05&&t<10.9)?1:0, `translateX(${(1-payIn)*100 - payOut*30}%)`);
+  $('payBtn').style.transform=`scale(${pressScale(t,10.5)})`;
+
+  const tkIn = seg(t,10.65,10.9,eio);
+  st('scrTicket', (t>=10.65&&t<12.0)?1:0, `translateX(${(1-tkIn)*100}%)`);
+  $('qLabel').style.transform=`scale(${0.6+0.4*seg(t,10.9,11.25,back)})`;
+
+  st('scrReady', t>=16.0?1:0);
+  const r1=((t-16.0)%1.0+1)%1, r2=((t-16.5)%1.0+1)%1;
+  st('ring1', t>=16? (1-r1)*.8:0, `scale(${1+r1*.55})`);
+  st('ring2', t>=16.5? (1-r2)*.8:0, `scale(${1+r2*.55})`);
+  $('statusBar').style.color = t>=16 ? '#fff' : 'var(--ink)';
+
+  // ---- tablet 12-16 ----
+  let tOp=0, tS=1, tY=0;
+  if (t>=12.0 && t<16.0){ const i=seg(t,12.0,12.4), o=lin(t,15.72,16.0); tOp=Math.min(1,i*1.5)*(1-o); tS=0.92+0.08*i; tY=(1-i)*60 - o*o*30; }
+  st('tablet', tOp, `translateY(${tY}px) scale(${tS})`);
+  const counts=[0,0,0];
+  for (const id in TL){
+    const tl=TL[id], el=$('vc'+id);
+    if (t<tl[0][0]) { st(el,0); continue; }
+    let k=0; for(let j=0;j<tl.length;j++) if(t>=tl[j][0]) k=j;
+    const cur=tl[k], prev=tl[Math.max(0,k-1)];
+    const m = k>0 ? seg(t,cur[0],cur[0]+.34,eio) : 1;
+    const px=COLX[prev[1]], py=ROWY0+prev[2]*ROWH, cx=COLX[cur[1]], cy=ROWY0+cur[2]*ROWH;
+    let x=px+(cx-px)*m, y=py+(cy-py)*m, o=1, s=1;
+    if (k===0 && tl[0][0]>0){ const d=seg(t,tl[0][0],tl[0][0]+.38,back); y=cy-(1-d)*90; o=lin(t,tl[0][0],tl[0][0]+.15); }
+    const moving = k>0 && m<1 && prev[1]!==cur[1];
+    if (moving) s = 1+0.05*Math.sin(Math.PI*m);
+    el.style.left=x+'px'; el.style.top=y+'px'; st(el,o,`scale(${s})`);
+    el.style.zIndex = moving?5:1;
+    const shown = (k>0 && m<.5) ? prev[1] : cur[1];
+    el.className='vcard'+(shown===1?' cooking':shown===2?' ready':'')+(id==='27'?' new':'');
+    const bt=$('vb'+id); if(bt.dataset.s!==String(shown)){ bt.innerHTML=BTN[shown]; bt.dataset.s=String(shown); }
+    const nextT = tl[k+1] ? tl[k+1][0] : null, b=bt.querySelector('.btn');
+    b.style.transform = (nextT && t>=nextT-.04 && t<nextT+.14) ? 'scale(.96)' : '';
+    const c=CARD[id];
+    $('vm'+id).textContent = shown===0 ? c.src : shown===1 ? `เริ่ม ${c.start}` : (id==='24'?'แจ้งเมื่อ 3 นาทีที่แล้ว':id==='25'?'แจ้งเมื่อ 1 นาทีที่แล้ว':'แจ้งลูกค้าแล้ว · เมื่อสักครู่');
+    counts[cur[1]]++;
+  }
+  $('cnt0').textContent=counts[0]; $('cnt1').textContent=counts[1]; $('cnt2').textContent=counts[2];
+  $('bSub').textContent=`คิวที่รออยู่ ${counts[0]+counts[1]} · ทำเสร็จเฉลี่ยล่าสุด 2 นาที/จาน (ระบบคำนวณจากปุ่มที่กด)`;
+
+  // ---- outro 18-20 ----
+  const oa=seg(t,18.0,18.35,back), ob=seg(t,18.1,18.45), oc=seg(t,18.3,18.65), od=seg(t,18.45,18.8);
+  st('outro', t>=18.0?1:0);
+  st('oIcon', lin(t,18.0,18.15), `scale(${0.5+0.5*oa})`);
+  st('oName', ob, `translateY(${(1-ob)*30}px)`);
+  st('oLine', oc, `translateY(${(1-oc)*30}px)`);
+  st('oSub', od, `translateY(${(1-od)*20}px)`);
+
+  tapAt(t);
+}
+window.render = render;
+render(0);
+</script>
+</body>
+</html>
