@@ -26,3 +26,20 @@ export function cookingWaitSeconds(
 ): number {
   return Math.max(0, myDishes * secondsPerItem - secondsSinceStart);
 }
+
+/**
+ * Wait shown to customers as a range (PLAN-V2.md D4): low = round(0.85 × min),
+ * high = ceil(1.3 × min). Always low ≥ 1 and high > low. 6 min → 5–8.
+ */
+export function waitRangeMinutes(seconds: number): { low: number; high: number } {
+  const min = Math.max(0, seconds) / 60;
+  const low = Math.max(1, Math.round(0.85 * min));
+  const high = Math.max(low + 1, Math.ceil(1.3 * min));
+  return { low, high };
+}
+
+/** True when an actual wait landed inside the range promised for `estimatedSeconds`. */
+export function withinWaitRange(actualSeconds: number, estimatedSeconds: number): boolean {
+  const { high } = waitRangeMinutes(estimatedSeconds);
+  return actualSeconds / 60 <= high;
+}

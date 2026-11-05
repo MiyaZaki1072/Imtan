@@ -338,6 +338,13 @@ export async function updateShopSettings(
     if (!isInt(input.manual_seconds_per_item, 10, 3600)) return { ok: false, error: 'bad_input' };
     update.manual_seconds_per_item = input.manual_seconds_per_item;
   }
+  // V2 (PLAN-V2.md Phase 13): pre-order slot capacity and per-order dish limit.
+  for (const key of ['preorder_dishes_per_slot', 'max_dishes_per_order'] as const) {
+    if (key in input) {
+      if (!isInt(input[key], 1, 50)) return { ok: false, error: 'bad_input' };
+      update[key] = input[key] as number;
+    }
+  }
   if (Object.keys(update).length === 0) return { ok: false, error: 'bad_input' };
 
   const { error } = await createAdminClient().from('shops').update(update).eq('id', shopId);

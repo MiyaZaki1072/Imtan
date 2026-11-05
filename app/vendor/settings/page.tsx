@@ -22,6 +22,8 @@ export default async function SettingsPage() {
           manualSecondsPerItem: shop.manualSecondsPerItem,
           allowItemNote: shop.allowItemNote,
           allowAllergyNote: shop.allowAllergyNote,
+          preorderDishesPerSlot: shop.preorderDishesPerSlot ?? 6,
+          maxDishesPerOrder: shop.maxDishesPerOrder ?? 10,
         }}
       />
     </main>

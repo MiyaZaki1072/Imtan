@@ -14,6 +14,44 @@ export interface ShopSettings {
   manualSecondsPerItem: number;
   allowItemNote: boolean;
   allowAllergyNote: boolean;
+  preorderDishesPerSlot: number;
+  maxDishesPerOrder: number;
+}
+
+function NumberField({
+  id,
+  text,
+  hint,
+  value,
+  onChange,
+}: {
+  id: string;
+  text: string;
+  hint: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className={label}>
+        {text}
+      </label>
+      <input
+        id={id}
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={50}
+        className={cx(input, 'w-28 text-center')}
+        value={value}
+        onChange={(e) => {
+          const n = Math.round(Number(e.target.value));
+          if (Number.isFinite(n)) onChange(Math.min(50, Math.max(1, n)));
+        }}
+      />
+      <p className="mt-1 text-xs text-muted">{hint}</p>
+    </div>
+  );
 }
 
 function Check({
@@ -41,7 +79,14 @@ function Check({
 export function SettingsForm({ shopId, initial }: { shopId: string; initial: ShopSettings }) {
   const [s, setS] = useState(initial);
   const [saved, setSaved] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const ids = { name: useId(), category: useId(), prefix: useId(), minutes: useId() };
+  const ids = {
+    name: useId(),
+    category: useId(),
+    prefix: useId(),
+    minutes: useId(),
+    slot: useId(),
+    max: useId(),
+  };
   const update = (patch: Partial<ShopSettings>) => {
     setSaved('idle');
     setS((x) => ({ ...x, ...patch }));
@@ -65,6 +110,8 @@ export function SettingsForm({ shopId, initial }: { shopId: string; initial: Sho
           manual_seconds_per_item: s.manualSecondsPerItem,
           allow_item_note: s.allowItemNote,
           allow_allergy_note: s.allowAllergyNote,
+          preorder_dishes_per_slot: s.preorderDishesPerSlot,
+          max_dishes_per_order: s.maxDishesPerOrder,
         }).catch(() => ({ ok: false }));
         setSaved(result.ok ? 'saved' : 'error');
       }}
@@ -183,6 +230,23 @@ export function SettingsForm({ shopId, initial }: { shopId: string; initial: Sho
         <Check checked={s.allowAllergyNote} onChange={(v) => update({ allowAllergyNote: v })}>
           ให้ลูกค้าแจ้งแพ้อาหาร
         </Check>
+      </section>
+
+      <section className={cx(card, 'space-y-4 px-4 py-4')}>
+        <NumberField
+          id={ids.slot}
+          text="สั่งล่วงหน้าได้กี่จานต่อช่วงเวลารับ"
+          hint="ช่วงเวลาที่เต็มแล้ว ลูกค้าจะเลือกไม่ได้"
+          value={s.preorderDishesPerSlot}
+          onChange={(v) => update({ preorderDishesPerSlot: v })}
+        />
+        <NumberField
+          id={ids.max}
+          text="สั่งผ่านแอปได้สูงสุดกี่จานต่อออเดอร์"
+          hint="เกินจากนี้ ลูกค้าต้องสั่งที่หน้าร้าน"
+          value={s.maxDishesPerOrder}
+          onChange={(v) => update({ maxDishesPerOrder: v })}
+        />
       </section>
 
       <div className="flex items-center justify-end gap-3">

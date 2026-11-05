@@ -1,8 +1,9 @@
 import 'server-only';
 
 import { createAdminClient } from '../supabase/admin';
-import type { OrderStatus, OrderViewData } from './types';
-import { effectiveStatus } from './wait';
+import { isScheduled } from './preorder';
+import type { HomeMine, OrderStatus, OrderViewData } from './types';
+import { effectiveStatus, remainingWaitSeconds } from './wait';
 
 /**
  * One order as its owner sees it. Reads with the service role after checking the order
@@ -73,9 +74,12 @@ export async function getOrderView(orderId: string, userId: string): Promise<Ord
     pickedUpAt: o.picked_up_at,
     lastCalledAt: o.last_called_at,
     feedback: o.feedback,
+    shopRating: o.shop_rating,
+    ratingComment: o.rating_comment,
     estimatedWaitSeconds: o.estimated_wait_seconds,
     dishesAhead,
     secondsPerItem,
+    waitMode: shop.wait_mode === 'manual' ? 'manual' : 'auto',
     serverNow: now.toISOString(),
   };
 }
@@ -96,4 +100,42 @@ export async function getLatestOrderId(userId: string): Promise<string | null> {
     return s === 'queued' || s === 'cooking' || s === 'ready' || s === 'awaiting_payment';
   });
   return (active ?? rows[0])?.id ?? null;
+}
+
+const OPEN: OrderStatus[] = ['awaiting_payment', 'queued', 'cooking', 'ready'];
+
+/** The customer's open orders (unpaid, queued, cooking, ready), newest first, at most 5. */
+export async function getOpenOrderIds(userId: string): Promise<string[]> {
+  const { data } = await createAdminClient()
+    .from('orders')
+    .select('id, status, payment_expires_at')
+    .eq('customer_id', userId)
+    .in('status', OPEN)
+    .order('created_at', { ascending: false })
+    .limit(5);
+  const now = new Date();
+  return (data ?? [])
+    .filter((r) => OPEN.includes(effectiveStatus(r.status as OrderStatus, r.payment_expires_at, now)))
+    .map((r) => r.id);
+}
+
+/** Open orders as cards for Home and the "คิวของฉัน" list. */
+export async function getOpenOrders(userId: string): Promise<HomeMine[]> {
+  const ids = await getOpenOrderIds(userId);
+  const views = await Promise.all(ids.map((id) => getOrderView(id, userId)));
+  return views
+    .filter((o): o is OrderViewData => o !== null && OPEN.includes(o.status))
+    .map((o) => {
+      const now = new Date(o.serverNow);
+      const scheduled = o.status === 'queued' && isScheduled(o.releaseAt, now);
+      return {
+        orderId: o.id,
+        shopName: o.shopName,
+        pickupAt: scheduled ? o.pickupAt : null,
+        queueLabel: o.queueLabel,
+        status: o.status,
+        waitSeconds:
+          o.status === 'queued' || o.status === 'cooking' ? remainingWaitSeconds(o, now) : null,
+      };
+    });
 }

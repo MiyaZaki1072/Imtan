@@ -19,6 +19,7 @@ export type PlaceOrderError =
   | 'pickup_invalid'
   | 'pickup_too_soon'
   | 'pickup_too_far'
+  | 'pickup_full'
   | 'failed';
 
 export type PlaceOrderResult =
@@ -75,6 +76,8 @@ export async function createAppOrder(
     p_pickup_at: pickup?.toISOString(),
     p_release_at: release?.toISOString(),
   });
+  if (error?.message.includes('slot_full')) return { ok: false, error: 'pickup_full' };
+  if (error?.message.includes('too_many_dishes')) return { ok: false, error: 'too_many_dishes' };
   if (error || !order) {
     console.error('insert_order failed:', error?.message);
     return { ok: false, error: 'failed' };

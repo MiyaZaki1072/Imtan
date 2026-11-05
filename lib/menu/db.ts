@@ -120,6 +120,8 @@ export async function loadShopBySlug(
       allowAllergyNote: shopRow.allow_allergy_note,
       waitMode: shopRow.wait_mode,
       manualSecondsPerItem: shopRow.manual_seconds_per_item,
+      maxDishesPerOrder: shopRow.max_dishes_per_order,
+      preorderDishesPerSlot: shopRow.preorder_dishes_per_slot,
       ingredients: ingredients.map((i) => ({
         id: i.id,
         name: i.name,

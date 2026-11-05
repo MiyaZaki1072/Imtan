@@ -10,10 +10,18 @@ import { formatBaht, formatClock } from '@/lib/format';
 import { ingredientMap, kitchenSummary, lineTotal, validate } from '@/lib/menu';
 import type { LoadedShop } from '@/lib/menu/db';
 import { placeOrder } from '@/lib/orders/actions';
-import { pickupSlots, releaseAt } from '@/lib/orders/preorder';
+import { pickupSlots, releaseAt, slotAvailability } from '@/lib/orders/preorder';
 import { ORDER_ERRORS } from '../cart/CartView';
 
-export function PreorderView({ initial, serverNow }: { initial: LoadedShop; serverNow: string }) {
+export function PreorderView({
+  initial,
+  used,
+  serverNow,
+}: {
+  initial: LoadedShop;
+  used: Record<string, number>;
+  serverNow: string;
+}) {
   const router = useRouter();
   const { shop, stats } = initial;
   const { cart } = useCart(shop.slug);
@@ -46,7 +54,14 @@ export function PreorderView({ initial, serverNow }: { initial: LoadedShop; serv
     () => (dishes > 0 ? pickupSlots(new Date(serverNow), dishes, stats.secondsPerItem) : []),
     [dishes, serverNow, stats.secondsPerItem],
   );
-  const slot = slots[chosen ?? 0];
+  const avail = useMemo(
+    () => slotAvailability(slots, used, shop.preorderDishesPerSlot ?? 6, dishes),
+    [slots, used, shop.preorderDishesPerSlot, dishes],
+  );
+  // Default to the first slot that can hold this cart, not simply the first one.
+  const firstFit = avail.findIndex((s) => s.fits);
+  const picked = chosen !== null && avail[chosen]?.fits ? chosen : firstFit;
+  const slot = picked >= 0 ? slots[picked] : undefined;
   const start = slot ? releaseAt(slot, dishes, stats.secondsPerItem) : null;
 
   async function confirm() {
@@ -74,6 +89,10 @@ export function PreorderView({ initial, serverNow }: { initial: LoadedShop; serv
     }
     setPlacing(false);
     setError(ORDER_ERRORS[result.error]);
+    if (result.error === 'pickup_full') {
+      setChosen(null);
+      router.refresh();
+    }
   }
 
   if (lines.length === 0) {
@@ -113,27 +132,33 @@ export function PreorderView({ initial, serverNow }: { initial: LoadedShop; serv
       </section>
 
       <h2 className="mt-5 mb-2 font-bold">เลือกเวลาที่จะมารับ</h2>
-      {slots.length === 0 ? (
+      {slots.length === 0 || firstFit < 0 ? (
         <p className="rounded-xl bg-warning-soft px-4 py-3 text-sm font-semibold text-warning">
           ไม่มีเวลาให้เลือกแล้ว ลองสั่งแบบรับเลย
         </p>
       ) : (
         <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="เวลารับ">
-          {slots.map((t, i) => (
+          {avail.map((s, i) => (
             <button
-              key={t.toISOString()}
+              key={s.at.toISOString()}
               type="button"
               role="radio"
-              aria-checked={(chosen ?? 0) === i}
+              aria-checked={picked === i}
+              disabled={!s.fits}
               onClick={() => setChosen(i)}
               className={cx(
-                'min-h-12 rounded-xl border-2 text-base font-semibold',
-                (chosen ?? 0) === i
+                'flex min-h-14 flex-col items-center justify-center rounded-xl border-2 text-base font-semibold',
+                picked === i
                   ? 'border-primary bg-primary-soft text-primary-hover'
-                  : 'border-border bg-surface',
+                  : s.fits
+                    ? 'border-border bg-surface'
+                    : 'border-border bg-bg text-muted',
               )}
             >
-              {formatClock(t)}
+              {formatClock(s.at)}
+              <span className="text-xs font-normal">
+                {s.remaining === 0 ? 'เต็มแล้ว' : `เหลือ ${s.remaining} จาน`}
+              </span>
             </button>
           ))}
         </div>

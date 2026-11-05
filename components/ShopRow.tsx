@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { waitMinutes } from '@/lib/format';
+import { formatWaitRange } from '@/lib/format';
 import type { BusyLevel } from '@/lib/queue';
 import { BusyPill } from './BusyPill';
+import { StarIcon } from './icons';
 import { card, cx } from './ui';
 
 export function ShopRow({
@@ -12,6 +13,8 @@ export function ShopRow({
   waitSeconds,
   busy,
   isOpen,
+  ratingAvg = null,
+  ratingCount = 0,
 }: {
   slug: string;
   name: string;
@@ -20,6 +23,8 @@ export function ShopRow({
   waitSeconds: number;
   busy: BusyLevel;
   isOpen: boolean;
+  ratingAvg?: number | null;
+  ratingCount?: number;
 }) {
   return (
     <Link
@@ -28,10 +33,19 @@ export function ShopRow({
     >
       <div className="min-w-0 flex-1">
         <p className="truncate text-base font-semibold">{name}</p>
-        <p className="truncate text-xs text-muted">{category}</p>
+        <p className="flex items-center gap-1 truncate text-xs text-muted">
+          {category}
+          {/* Only with 3+ ratings: one rating is misleading (PLAN-V2.md D5). */}
+          {ratingAvg !== null && ratingCount >= 3 && (
+            <span className="inline-flex items-center gap-0.5 font-semibold text-warning">
+              · <StarIcon size={12} fill="currentColor" />
+              {Number(ratingAvg).toFixed(1)} ({ratingCount})
+            </span>
+          )}
+        </p>
         <p className="mt-1 text-sm text-muted">
           {isOpen
-            ? `${dishesInQueue} จานในคิว · รอประมาณ ${waitMinutes(waitSeconds)} นาที`
+            ? `${dishesInQueue} จานในคิว · รอ ${formatWaitRange(waitSeconds)}`
             : 'ปิดรับชั่วคราว'}
         </p>
       </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkPickup, earliestPickup, isScheduled, pickupSlots, releaseAt } from './preorder';
+import { checkPickup, earliestPickup, isScheduled, pickupSlots, releaseAt, slotAvailability } from './preorder';
 
 const now = new Date('2026-10-30T04:50:00Z'); // 11:50 in Bangkok
 
@@ -50,5 +50,23 @@ describe('isScheduled', () => {
     expect(isScheduled('2026-10-30T05:00:00Z', now)).toBe(true);
     expect(isScheduled('2026-10-30T04:00:00Z', now)).toBe(false);
     expect(isScheduled(null, now)).toBe(false);
+  });
+});
+
+describe('slotAvailability', () => {
+  const a = new Date('2026-11-05T05:00:00.000Z');
+  const b = new Date('2026-11-05T05:10:00.000Z');
+  it('counts remaining dishes and whether the cart fits', () => {
+    const r = slotAvailability([a, b], { [a.toISOString()]: 4 }, 6, 3);
+    expect(r.map((s) => [s.remaining, s.fits])).toEqual([
+      [2, false],
+      [6, true],
+    ]);
+  });
+  it('never goes below zero when a slot is over-full', () => {
+    expect(slotAvailability([a], { [a.toISOString()]: 9 }, 6, 1)[0]).toMatchObject({
+      remaining: 0,
+      fits: false,
+    });
   });
 });

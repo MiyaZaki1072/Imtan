@@ -63,3 +63,27 @@ export function pickupSlots(
 export function isScheduled(releaseAtIso: string | null, now: Date): boolean {
   return !!releaseAtIso && new Date(releaseAtIso).getTime() > now.getTime();
 }
+
+export interface SlotAvailability {
+  at: Date;
+  /** Dishes still free in this slot (never below 0). */
+  remaining: number;
+  /** Whether a cart of `dishes` fits. */
+  fits: boolean;
+}
+
+/**
+ * How full each pickup slot is (PLAN-V2.md D2). `usedBySlot` maps a slot's ISO time to the
+ * dishes already held there by unpaid-but-live and paid orders. SQL re-checks on insert.
+ */
+export function slotAvailability(
+  slots: Date[],
+  usedBySlot: Record<string, number>,
+  capacity: number,
+  dishes: number,
+): SlotAvailability[] {
+  return slots.map((at) => {
+    const remaining = Math.max(0, capacity - (usedBySlot[at.toISOString()] ?? 0));
+    return { at, remaining, fits: dishes <= remaining };
+  });
+}

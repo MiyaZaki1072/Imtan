@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
+import { getSlotUsage } from '@/lib/orders/slots';
 import { getShopFromDb } from '@/lib/shops';
 import { PreorderView } from './PreorderView';
 
@@ -18,5 +19,6 @@ async function Preorder({ params }: PageProps<'/s/[slug]/preorder'>) {
   const { slug } = await params;
   const loaded = await getShopFromDb(slug);
   if (!loaded) notFound();
-  return <PreorderView initial={loaded} serverNow={new Date().toISOString()} />;
+  const used = await getSlotUsage(loaded.shop.id);
+  return <PreorderView initial={loaded} used={used} serverNow={new Date().toISOString()} />;
 }

@@ -23,7 +23,19 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="th" className={`${plexThai.variable} h-full antialiased`}>
+    <html
+      lang="th"
+      className={`${plexThai.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
+      <head>
+        {/* Saved dark theme, applied before paint. Customer screens only (PLAN-V2.md Phase 16). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem('imtan:theme')==='dark'&&!/^/(vendor|admin|login|demo)/.test(location.pathname))document.documentElement.dataset.theme='dark'}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>
   );

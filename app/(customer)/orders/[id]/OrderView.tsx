@@ -5,16 +5,19 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { BackLink } from '@/components/BackLink';
 import { BottomNav } from '@/components/BottomNav';
-import { CheckIcon } from '@/components/icons';
+import { CheckIcon, StarIcon } from '@/components/icons';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { markReadyOpened } from '@/components/OpenOrders';
 import { OrderSteps, type OrderStep } from '@/components/OrderSteps';
 import { QueueTicket, TicketStat } from '@/components/QueueTicket';
 import { ReadyAlert } from '@/components/ReadyAlert';
 import { btnLarge, btnPrimary, card, cx } from '@/components/ui';
 import { useArmAudio, useWakeLock } from '@/lib/alert';
-import { formatBaht, formatClock, waitMinutes } from '@/lib/format';
+import { formatBaht, formatClock, formatWaitRange, waitMinutes } from '@/lib/format';
+import { withinWaitRange } from '@/lib/queue';
 import { HistoryList } from '@/components/HistoryList';
-import { markReceived, submitFeedback } from '@/lib/orders/actions';
+import { InstallPrompt } from '@/components/InstallPrompt';
+import { markReceived, submitFeedback, submitRating } from '@/lib/orders/actions';
 import { isScheduled } from '@/lib/orders/preorder';
 import type { OrderViewData, WaitFeedback } from '@/lib/orders/types';
 import { remainingWaitSeconds } from '@/lib/orders/wait';
@@ -25,6 +28,84 @@ const FEEDBACK: { value: WaitFeedback; label: string }[] = [
   { value: 'accurate', label: 'ตรงตามที่บอก' },
   { value: 'slower', label: 'ช้ากว่าที่บอก' },
 ];
+
+/** 1–5 stars and an optional comment for the shop (PLAN-V2.md Phase 15). */
+function RateShop({
+  orderId,
+  shopName,
+  rating,
+  comment,
+  onSaved,
+}: {
+  orderId: string;
+  shopName: string;
+  rating: number | null;
+  comment: string | null;
+  onSaved: () => void;
+}) {
+  const [stars, setStars] = useState(rating ?? 0);
+  const [text, setText] = useState(comment ?? '');
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>(
+    rating ? 'saved' : 'idle',
+  );
+  async function save(value: number) {
+    setStars(value);
+    setState('saving');
+    const r = await submitRating(orderId, value, text.trim()).catch(() => ({ ok: false }));
+    setState(r.ok ? 'saved' : 'error');
+    if (r.ok) onSaved();
+  }
+  return (
+    <section className={cx(card, 'mt-3 px-4 py-4')} aria-label="ให้คะแนนร้าน">
+      <h2 className="font-bold">ให้คะแนน {shopName}</h2>
+      <div className="mt-2 flex gap-1" role="radiogroup" aria-label="คะแนน">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={stars === n}
+            aria-label={`${n} ดาว`}
+            disabled={state === 'saving'}
+            onClick={() => save(n)}
+            className={cx(
+              'inline-flex h-12 w-12 items-center justify-center rounded-xl',
+              n <= stars ? 'text-warning' : 'text-border',
+            )}
+          >
+            <StarIcon size={32} fill={n <= stars ? 'currentColor' : 'none'} />
+          </button>
+        ))}
+      </div>
+      <label className="mt-2 block text-sm text-muted">
+        ความเห็นถึงร้าน (ไม่บังคับ)
+        <textarea
+          maxLength={200}
+          rows={2}
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            if (state === 'saved') setState('idle');
+          }}
+          className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2 text-base text-ink"
+        />
+      </label>
+      {stars > 0 && state === 'idle' && (
+        <button
+          type="button"
+          onClick={() => save(stars)}
+          className="mt-2 min-h-11 text-sm font-semibold text-primary"
+        >
+          ส่งความเห็น
+        </button>
+      )}
+      <p className="mt-1 text-xs text-muted" aria-live="polite">
+        {state === 'saved' && 'ขอบคุณ! ร้านจะเห็นคะแนนและความเห็นนี้ โดยไม่เห็นชื่อคุณ'}
+        {state === 'error' && 'ส่งไม่สำเร็จ ลองใหม่อีกครั้ง'}
+      </p>
+    </section>
+  );
+}
 
 function steps(o: OrderViewData, scheduled: boolean): OrderStep[] {
   const idx = ['queued', 'cooking', 'ready', 'picked_up'].indexOf(o.status);
@@ -96,6 +177,10 @@ export function OrderView({ initial }: { initial: OrderViewData }) {
 
   useArmAudio();
   useWakeLock(o.status === 'queued' || o.status === 'cooking');
+
+  useEffect(() => {
+    if (o.status === 'ready') markReadyOpened(o.id);
+  }, [o.status, o.id]);
 
   useEffect(() => {
     if (o.status === 'awaiting_payment') router.replace(`/orders/${o.id}/pay`);
@@ -179,7 +264,7 @@ export function OrderView({ initial }: { initial: OrderViewData }) {
           ) : (
             <div className="mt-3 grid grid-cols-3 gap-2">
               <TicketStat label="จานก่อนหน้า" value={o.dishesAhead} />
-              <TicketStat label="รอประมาณ" value={`${waitMinutes(wait)} นาที`} />
+              <TicketStat label="รอประมาณ" value={formatWaitRange(wait)} />
               <TicketStat label="พร้อมราว" value={formatClock(readyBy)} />
             </div>
           )}
@@ -257,9 +342,23 @@ export function OrderView({ initial }: { initial: OrderViewData }) {
                   <dd className="text-success">
                     {waited} นาที
                     {o.estimatedWaitSeconds !== null &&
-                      ` (แอปประมาณไว้ ${waitMinutes(o.estimatedWaitSeconds)} นาที)`}
+                      ` (แอปบอกไว้ ${formatWaitRange(o.estimatedWaitSeconds)})`}
                   </dd>
                 </div>
+              )}
+              {waited !== null && o.estimatedWaitSeconds !== null && (
+                <p
+                  className={cx(
+                    'rounded-lg px-3 py-1.5 text-center text-sm font-semibold',
+                    withinWaitRange(waited * 60, o.estimatedWaitSeconds)
+                      ? 'bg-success-soft text-success'
+                      : 'bg-warning-soft text-warning',
+                  )}
+                >
+                  {withinWaitRange(waited * 60, o.estimatedWaitSeconds)
+                    ? 'อยู่ในช่วงที่บอก'
+                    : 'นานกว่าที่บอก'}
+                </p>
               )}
             </dl>
           </section>
@@ -292,6 +391,17 @@ export function OrderView({ initial }: { initial: OrderViewData }) {
             </p>
           </section>
 
+          <InstallPrompt />
+
+          <RateShop
+            key={o.shopRating ?? 0}
+            orderId={o.id}
+            shopName={o.shopName}
+            rating={o.shopRating}
+            comment={o.ratingComment}
+            onSaved={refresh}
+          />
+
           <h2 className="mt-6 mb-2 font-bold">ประวัติการสั่ง</h2>
           <HistoryList limit={3} />
           <Link
@@ -319,7 +429,7 @@ export function OrderView({ initial }: { initial: OrderViewData }) {
       <main className="flex-1 px-4 pt-3 pb-24">
         <BackLink href="/">หน้าแรก</BackLink>
         <h1 className="mt-1 text-2xl font-bold">คิวของฉัน</h1>
-        {offline && <OfflineBanner />}
+        {offline && <OfflineBanner fetchedAt={fetchedAt} />}
 
         <div className="mt-4">
           {cooking ? (
@@ -349,7 +459,7 @@ export function OrderView({ initial }: { initial: OrderViewData }) {
                 <span>พร้อมราว {formatClock(readyBy)}</span>
               </div>
               <p className="mt-3 text-3xl font-bold">
-                {wait > 0 ? `อีกประมาณ ${waitMinutes(wait)} นาที` : 'ใกล้เสร็จแล้ว'}
+                {wait > 0 ? `อีก ${formatWaitRange(wait)}` : 'ใกล้เสร็จแล้ว'}
               </p>
             </QueueTicket>
           ) : (
@@ -369,12 +479,25 @@ export function OrderView({ initial }: { initial: OrderViewData }) {
                 <>
                   <div className="mt-4 grid grid-cols-2 gap-2">
                     <TicketStat label="จานก่อนหน้าคุณ" value={`${o.dishesAhead} จาน`} />
-                    <TicketStat label="เวลารอโดยประมาณ" value={`~${waitMinutes(wait)} นาที`} />
+                    <TicketStat label="เวลารอโดยประมาณ" value={formatWaitRange(wait)} />
                   </div>
                   <p className="mt-3 text-sm text-muted">
-                    คาดว่าพร้อมรับประมาณ {formatClock(readyBy)} น. ({o.dishesAhead + o.itemCount}{' '}
-                    จาน × เฉลี่ย {waitMinutes(o.secondsPerItem)} นาที)
+                    คาดว่าพร้อมรับประมาณ {formatClock(readyBy)} น.
                   </p>
+                  <details className="mt-3 rounded-xl bg-info-soft px-3 py-2 text-sm text-info-ink">
+                    <summary className="flex min-h-11 cursor-pointer items-center font-semibold">
+                      เวลานี้มาจากไหน?
+                    </summary>
+                    <p>
+                      จานก่อนหน้า {o.dishesAhead} + ของคุณ {o.itemCount} = {o.dishesAhead + o.itemCount}{' '}
+                      จาน × เฉลี่ย {waitMinutes(o.secondsPerItem)} นาที/จาน
+                    </p>
+                    <p className="mt-1 pb-1">
+                      {o.waitMode === 'manual'
+                        ? 'ร้านตั้งเวลาต่อจานไว้เอง'
+                        : 'ระบบคำนวณจากเวลาที่ร้านกดเสร็จล่าสุด และปรับใหม่เมื่อคิวเปลี่ยน'}
+                    </p>
+                  </details>
                 </>
               )}
             </QueueTicket>

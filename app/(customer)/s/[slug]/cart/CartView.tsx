@@ -36,6 +36,8 @@ export const ORDER_ERRORS: Record<PlaceOrderError, string> = {
   pickup_invalid: 'เวลารับไม่ถูกต้อง เลือกเวลาใหม่',
   pickup_too_soon: 'เวลารับใกล้เกินไป เลือกเวลาใหม่',
   pickup_too_far: 'เลือกเวลารับล่วงหน้าได้ไม่เกิน 3 ชั่วโมง',
+  pickup_full: 'เวลารับนี้เต็มแล้ว เลือกเวลาอื่น',
+  too_many_dishes: 'สั่งเกินจำนวนจานต่อออเดอร์ กรุณาสั่งที่หน้าร้าน',
 };
 
 export function CartView({ initial }: { initial: LoadedShop }) {
@@ -99,8 +101,11 @@ export function CartView({ initial }: { initial: LoadedShop }) {
   const total = lines.reduce((sum, l) => sum + (l.total ?? 0), 0);
   const issues = cartIssues(lines, total);
   const pairOnlyNames = [...new Set(lines.filter((l) => l.menu.pairOnly).map((l) => l.menu.name))];
+  const dishes = lines.reduce((n, l) => n + l.line.qty, 0);
+  const tooMany = shop.maxDishesPerOrder !== undefined && dishes > shop.maxDishesPerOrder;
   const blocked =
     lines.length === 0 ||
+    tooMany ||
     lines.some((l) => l.problem) ||
     issues.pairOnlyAlone ||
     issues.underMinimum ||
@@ -205,6 +210,11 @@ export function CartView({ initial }: { initial: LoadedShop }) {
         {issues.underMinimum && !issues.pairOnlyAlone && (
           <p className="rounded-xl bg-warning-soft px-4 py-3 text-sm font-semibold text-warning">
             ยอดขั้นต่ำ {formatBaht(MIN_ORDER_SATANG)} ต่อออเดอร์
+          </p>
+        )}
+        {tooMany && (
+          <p className="rounded-xl bg-warning-soft px-4 py-3 text-sm font-semibold text-warning">
+            สั่งเกิน {shop.maxDishesPerOrder} จาน กรุณาสั่งที่หน้าร้าน
           </p>
         )}
         {!shop.isOpen && (

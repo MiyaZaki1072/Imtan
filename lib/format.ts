@@ -1,3 +1,5 @@
+import { waitRangeMinutes } from './queue';
+
 export const TIME_ZONE = 'Asia/Bangkok';
 
 /** `4500` → `฿45`; decimals only when there are satang (`4550` → `฿45.50`). */
@@ -28,4 +30,10 @@ export function waitMinutes(seconds: number): number {
 
 export function queueLabel(prefix: string, queueNo: number): string {
   return `${prefix}-${queueNo}`;
+}
+
+/** Customer-facing wait as a range, e.g. `5–8 นาที` (PLAN-V2.md D4). */
+export function formatWaitRange(seconds: number): string {
+  const { low, high } = waitRangeMinutes(seconds);
+  return `${low}–${high} นาที`;
 }

@@ -32,6 +32,7 @@ export function VendorOrderCard({
   order,
   minutesSinceReady,
   busy,
+  pending = null,
   scheduled = false,
   onStart,
   onReady,
@@ -43,6 +44,8 @@ export function VendorOrderCard({
   minutesSinceReady: number | null;
   /** An action for this order is running: buttons wait so a double tap can't fire twice. */
   busy?: boolean;
+  /** A status tap made offline that is waiting to be sent, e.g. 'ready'. */
+  pending?: string | null;
   /** A paid pre-order the shop has not been told to start yet. */
   scheduled?: boolean;
   onStart: () => void;
@@ -62,8 +65,14 @@ export function VendorOrderCard({
           : 'border-border bg-surface',
         order.status === 'cooking' && 'border-warning/50',
         scheduled && 'border-dashed border-info-ink/40 bg-bg',
+        pending && 'ring-2 ring-warning',
       )}
     >
+      {pending && (
+        <p className="mb-1.5 rounded-lg bg-warning-soft px-2.5 py-1 text-sm font-semibold text-warning">
+          รอส่ง: {pending} · จะส่งเมื่อสัญญาณกลับมา
+        </p>
+      )}
       <header className="flex flex-wrap items-baseline justify-between gap-x-2">
         <p className="text-2xl font-bold">
           {order.queueLabel}
@@ -80,10 +89,15 @@ export function VendorOrderCard({
         </p>
       </header>
 
-      {scheduled && order.pickupAt && order.releaseAt && (
-        <p className="mt-1.5 rounded-lg bg-info-soft px-2.5 py-1 text-sm font-semibold text-info-ink">
-          สั่งล่วงหน้า · รับ {formatClock(order.pickupAt)} น. · เริ่มทำ ~
-          {formatClock(order.releaseAt)} น.
+      {order.status === 'queued' && order.pickupAt && order.releaseAt && (
+        <p
+          className={cx(
+            'mt-1.5 rounded-lg px-2.5 py-1 text-sm font-semibold',
+            scheduled ? 'bg-info-soft text-info-ink' : 'bg-success-soft text-success',
+          )}
+        >
+          {scheduled ? `เริ่ม ${formatClock(order.releaseAt)}` : 'เริ่มเลย'} · สั่งล่วงหน้า รับ{' '}
+          {formatClock(order.pickupAt)} น.
         </p>
       )}
 

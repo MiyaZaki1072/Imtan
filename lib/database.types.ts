@@ -389,6 +389,8 @@ export type Database = {
           ready_at: string | null;
           refund_method: Database['public']['Enums']['payment_method'] | null;
           release_at: string | null;
+          rating_comment: string | null;
+          shop_rating: number | null;
           shop_id: string;
           source: Database['public']['Enums']['order_source'];
           started_at: string | null;
@@ -419,6 +421,8 @@ export type Database = {
           ready_at?: string | null;
           refund_method?: Database['public']['Enums']['payment_method'] | null;
           release_at?: string | null;
+          rating_comment?: string | null;
+          shop_rating?: number | null;
           shop_id: string;
           source: Database['public']['Enums']['order_source'];
           started_at?: string | null;
@@ -449,6 +453,8 @@ export type Database = {
           ready_at?: string | null;
           refund_method?: Database['public']['Enums']['payment_method'] | null;
           release_at?: string | null;
+          rating_comment?: string | null;
+          shop_rating?: number | null;
           shop_id?: string;
           source?: Database['public']['Enums']['order_source'];
           started_at?: string | null;
@@ -608,6 +614,10 @@ export type Database = {
           items_in_queue: number;
           learned_seconds_per_item: number | null;
           manual_seconds_per_item: number;
+          max_dishes_per_order: number;
+          rating_avg: number | null;
+          rating_count: number;
+          preorder_dishes_per_slot: number;
           name: string;
           queue_prefix: string;
           slug: string;
@@ -627,6 +637,10 @@ export type Database = {
           items_in_queue?: number;
           learned_seconds_per_item?: number | null;
           manual_seconds_per_item: number;
+          max_dishes_per_order?: number;
+          rating_avg?: number | null;
+          rating_count?: number;
+          preorder_dishes_per_slot?: number;
           name: string;
           queue_prefix: string;
           slug: string;
@@ -646,6 +660,10 @@ export type Database = {
           items_in_queue?: number;
           learned_seconds_per_item?: number | null;
           manual_seconds_per_item?: number;
+          max_dishes_per_order?: number;
+          rating_avg?: number | null;
+          rating_count?: number;
+          preorder_dishes_per_slot?: number;
           name?: string;
           queue_prefix?: string;
           slug?: string;
@@ -853,6 +871,10 @@ export type Database = {
       };
       refresh_shop_stats: { Args: { p_shop_id: string }; Returns: undefined };
       shop_seconds_per_item: { Args: { p_shop_id: string }; Returns: number };
+      submit_rating: {
+        Args: { p_comment?: string; p_order_id: string; p_rating: number };
+        Returns: undefined;
+      };
       submit_feedback: {
         Args: {
           p_feedback: Database['public']['Enums']['wait_feedback'];

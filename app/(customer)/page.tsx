@@ -6,6 +6,11 @@ import { Greeting } from '@/components/Greeting';
 import { QrIcon } from '@/components/icons';
 import { getUserId } from '@/lib/auth';
 import { getHomeData } from '@/lib/home';
+import { InstallPrompt } from '@/components/InstallPrompt';
+import { RandomMenuButton } from '@/components/RandomMenuButton';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { card, cx } from '@/components/ui';
+import { getPopularMenus } from '@/lib/orders/popular';
 import { HomeLive } from './HomeLive';
 
 export default function HomePage() {
@@ -17,8 +22,12 @@ export default function HomePage() {
             <h1 className="text-3xl font-bold text-primary">อิ่มทัน</h1>
             <p className="mt-1 text-sm text-muted">โรงอาหารคณะวิศวกรรมศาสตร์ จุฬาฯ</p>
           </div>
-          <Greeting />
+          <div className="flex items-center gap-2">
+            <Greeting />
+            <ThemeToggle />
+          </div>
         </header>
+        <InstallPrompt />
 
         <Link
           href="/scan"
@@ -36,9 +45,44 @@ export default function HomePage() {
         <Suspense fallback={<p className="mt-8 text-muted">กำลังโหลดคิว…</p>}>
           <Live />
         </Suspense>
+
+        <div className="mt-6">
+          <RandomMenuButton />
+        </div>
+        <Suspense fallback={null}>
+          <Popular />
+        </Suspense>
       </main>
       <BottomNav />
     </>
+  );
+}
+
+/** Top 3 menus from real orders in the last 14 days; hidden without data. */
+async function Popular() {
+  const menus = await getPopularMenus();
+  if (menus.length === 0) return null;
+  return (
+    <section className="mt-6" aria-label="เมนูยอดนิยม">
+      <h2 className="text-lg font-bold">เมนูยอดนิยม 14 วัน</h2>
+      <ul className="mt-3 space-y-2">
+        {menus.map((m, i) => (
+          <li key={m.menuId}>
+            <Link
+              href={`/s/${m.shopSlug}?menu=${encodeURIComponent(m.menuId)}`}
+              className={cx(card, 'flex min-h-12 items-center gap-3 px-4 py-3 hover:border-primary/40')}
+            >
+              <span className="text-lg font-bold text-primary">{i + 1}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold">{m.menuName}</span>
+                <span className="block truncate text-xs text-muted">{m.shopName}</span>
+              </span>
+              <span className="text-sm text-muted">{m.qty} จาน</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

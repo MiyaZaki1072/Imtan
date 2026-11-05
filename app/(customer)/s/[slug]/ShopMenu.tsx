@@ -10,7 +10,7 @@ import { MenuCard } from '@/components/MenuCard';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { btnPrimary, cx } from '@/components/ui';
 import { useCart } from '@/lib/cart-store';
-import { formatBaht, waitMinutes } from '@/lib/format';
+import { formatBaht, formatWaitRange } from '@/lib/format';
 import {
   ingredientMap,
   lineTotal,
@@ -84,7 +84,7 @@ export function ShopMenu({ initial }: { initial: LoadedShop }) {
             {stats.busyLevel} · {stats.itemsInQueue} จานในคิว
           </span>
           <span className="rounded-full bg-bg px-3 py-1 text-ink">
-            ถ้าสั่งตอนนี้ รอประมาณ {waitMinutes(stats.estWaitSeconds + stats.secondsPerItem)} นาที
+            ถ้าสั่งตอนนี้ รอประมาณ {formatWaitRange(stats.estWaitSeconds + stats.secondsPerItem)}
           </span>
         </div>
       </header>

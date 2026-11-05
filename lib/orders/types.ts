@@ -44,11 +44,16 @@ export interface OrderViewData {
   pickedUpAt: string | null;
   lastCalledAt: string | null;
   feedback: WaitFeedback | null;
+  /** 1–5 stars the customer gave the shop for this order, and their comment. */
+  shopRating: number | null;
+  ratingComment: string | null;
   /** The wait promised when the order got its number. */
   estimatedWaitSeconds: number | null;
   /** Dishes in front of this order (queued/cooking orders before it). */
   dishesAhead: number;
   secondsPerItem: number;
+  /** How the shop sets seconds per dish: learned from taps, or typed in. */
+  waitMode: 'auto' | 'manual';
   /** Server clock when this was built; clients use it to correct for a wrong device clock. */
   serverNow: string;
 }
@@ -61,11 +66,15 @@ export interface HomeShop {
   itemsInQueue: number;
   estWaitSeconds: number;
   busyLevel: 'ว่าง' | 'ปานกลาง' | 'แน่น';
+  ratingAvg: number | null;
+  ratingCount: number;
 }
 
 export interface HomeMine {
   orderId: string;
   shopName: string;
+  /** Pre-order pickup time while the shop hasn't started it yet. */
+  pickupAt: string | null;
   queueLabel: string | null;
   status: OrderStatus;
   waitSeconds: number | null;
@@ -74,7 +83,8 @@ export interface HomeMine {
 export interface HomeData {
   userId: string;
   shops: HomeShop[];
-  mine: HomeMine | null;
+  /** Open orders (unpaid, queued, cooking, ready), newest first, at most 5. */
+  mine: HomeMine[];
 }
 
 /** A finished order in "ประวัติการสั่ง". */

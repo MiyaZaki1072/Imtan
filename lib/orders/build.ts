@@ -34,7 +34,8 @@ export type BuildError =
   | 'unknown_menu'
   | 'invalid_selections'
   | 'pair_only_alone'
-  | 'under_minimum';
+  | 'under_minimum'
+  | 'too_many_dishes';
 
 export type BuildResult =
   | {
@@ -131,11 +132,17 @@ export function buildOrder(
   if (issues.pairOnlyAlone) return { ok: false, error: 'pair_only_alone' };
   if (issues.underMinimum && !options.walkIn) return { ok: false, error: 'under_minimum' };
 
+  // Per-order dish limit applies to app orders only, never walk-ins (PLAN-V2.md D1).
+  const itemCount = items.reduce((n, it) => n + it.qty, 0);
+  if (!options.walkIn && shop.maxDishesPerOrder !== undefined && itemCount > shop.maxDishesPerOrder) {
+    return { ok: false, error: 'too_many_dishes' };
+  }
+
   return {
     ok: true,
     items,
     totalSatang,
-    itemCount: items.reduce((n, it) => n + it.qty, 0),
+    itemCount,
     allergyNote: allergy,
   };
 }

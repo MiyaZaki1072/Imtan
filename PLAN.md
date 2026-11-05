@@ -206,7 +206,7 @@ Prices are never computed by formula at checkout.
   - `handle_new_user` copies only a trimmed `display_name`. Role is always `customer`.
 - **Writes:**
   - Clients never write tables directly. Server actions call `requireCustomer()`, `requireVendor(shopId)` or `requireAdmin()` (checked on the server), then use the service-role client.
-  - Vendor shop edits use a whitelist: `name, category, queue_prefix, is_open, wait_mode, manual_seconds_per_item, allow_*`.
+  - Vendor shop edits use a whitelist: `name, category, queue_prefix, is_open, wait_mode, manual_seconds_per_item, allow_*`, plus (V2) `preorder_dishes_per_slot, max_dishes_per_order`.
 - **RLS reads:**
   - Menus, shops and ingredients: public.
   - Orders and items: customer sees their own. Vendor sees their own shop's orders where `paid_at is not null` or the source is not `app`.

@@ -131,4 +131,13 @@ describe('buildOrder', () => {
     const r2 = buildOrder(s, [line], 'แพ้กุ้ง');
     expect(r2.ok && r2.items[0].note === 'แยกน้ำ' && r2.allergyNote === 'แพ้กุ้ง').toBe(true);
   });
+
+  it('rejects app orders over the per-order dish limit, but not walk-ins', () => {
+    const s = { ...shop(loadShops(), 'jae-buek'), maxDishesPerOrder: 3 };
+    const m = menu(s, 'ผัดกะเพรา');
+    const lines = [{ menuId: m.id, selections: sampleSelections(m, s), qty: 4, note: '' }];
+    expect(buildOrder(s, lines, '')).toEqual({ ok: false, error: 'too_many_dishes' });
+    expect(buildOrder(s, lines, '', { walkIn: true }).ok).toBe(true);
+    expect(buildOrder({ ...s, maxDishesPerOrder: 4 }, lines, '').ok).toBe(true);
+  });
 });

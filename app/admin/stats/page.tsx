@@ -192,6 +192,7 @@ async function Stats({ searchParams }: PageProps<'/admin/stats'>) {
               <Th>ร้าน</Th>
               <Th>เวลารอจริง</Th>
               <Th>คลาดเคลื่อนเฉลี่ย</Th>
+              <Th>อยู่ในช่วงที่บอก</Th>
               <Th>ความเห็นลูกค้า ({overall.feedback.total})</Th>
             </tr>
           </thead>
@@ -209,6 +210,10 @@ async function Stats({ searchParams }: PageProps<'/admin/stats'>) {
                 <td className="px-3 py-2">
                   {signed(s.estimateError.avg)}{' '}
                   <span className="font-normal text-muted">({s.estimateError.n} ออเดอร์)</span>
+                </td>
+                <td className="px-3 py-2">
+                  {s.inRange.total ? `${Math.round((s.inRange.hit / s.inRange.total) * 100)}%` : '–'}{' '}
+                  <span className="font-normal text-muted">({s.inRange.hit}/{s.inRange.total})</span>
                 </td>
                 <td className="px-3 py-2">
                   <FeedbackBar f={s.feedback} />

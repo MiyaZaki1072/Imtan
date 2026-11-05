@@ -18,7 +18,15 @@ import {
   actSetOrderStatus,
   actUpdateShopSettings,
 } from '@/lib/vendor/actions';
+import { sortByStart } from '@/lib/vendor/sort';
+import { loadTaps, replayTaps, saveTaps, type PendingTap } from '@/lib/vendor/pending-taps';
 import type { VendorBoardData, VendorOrder, VendorOrderStatus } from '@/lib/vendor/types';
+
+const PENDING_TEXT: Record<PendingTap['status'], string> = {
+  cooking: 'เริ่มทำ',
+  ready: 'เสร็จแล้ว',
+  picked_up: 'รับแล้ว',
+};
 
 const COLUMNS: { status: VendorOrderStatus; title: string; badge: string }[] = [
   { status: 'queued', title: 'รอทำ', badge: 'bg-bg text-ink' },
@@ -128,6 +136,65 @@ export function VendorBoard({
   const serverNow =
     Date.parse(board.serverNow) + (nowMs === null ? 0 : Math.max(0, nowMs - fetchedAt));
 
+  // Offline status taps (PLAN-V2.md Phase 16): queued per shop, replayed in order.
+  const [taps, setTaps] = useState<PendingTap[]>([]);
+  const replaying = useRef(false);
+  // Read storage after mount (async) so server and client render the same first frame.
+  useEffect(() => {
+    const t = window.setTimeout(() => setTaps(loadTaps(shopId)), 0);
+    return () => window.clearTimeout(t);
+  }, [shopId]);
+  const updateTaps = (next: PendingTap[]) => {
+    saveTaps(shopId, next);
+    setTaps(next);
+  };
+  async function flushTaps() {
+    const queued = loadTaps(shopId);
+    if (replaying.current || queued.length === 0) return;
+    replaying.current = true;
+    const { left, rejected } = await replayTaps(queued, async (t) => {
+      try {
+        const r = await actSetOrderStatus(shopId, t.orderId, t.status);
+        return r.ok ? 'ok' : 'rejected';
+      } catch {
+        return 'network';
+      }
+    });
+    replaying.current = false;
+    updateTaps(left);
+    if (rejected.length)
+      setToast(`ส่งไม่ได้ ${rejected.map((t) => t.label).join(', ')} (ออเดอร์เปลี่ยนไปแล้ว)`);
+    else if (left.length === 0) setToast('ส่งรายการที่ค้างแล้ว');
+    refresh();
+  }
+  useEffect(() => {
+    const t = offline ? undefined : window.setTimeout(() => void flushTaps(), 0);
+    window.addEventListener('online', flushTaps);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('online', flushTaps);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offline, shopId]);
+
+  /** เริ่มทำ / เสร็จแล้ว / รับแล้ว. Without signal the tap is queued instead of lost. */
+  async function tap(order: VendorOrder, status: PendingTap['status'], done?: string) {
+    if (loadTaps(shopId).length > 0 || !navigator.onLine) {
+      updateTaps([...loadTaps(shopId), { orderId: order.id, label: order.queueLabel, status }]);
+      return;
+    }
+    setBusyId(order.id);
+    try {
+      const result = await actSetOrderStatus(shopId, order.id, status);
+      if (done && result.ok) setToast(done);
+      if (!result.ok) setToast('ทำรายการไม่ได้ ออเดอร์อาจเปลี่ยนไปแล้ว');
+    } catch {
+      updateTaps([...loadTaps(shopId), { orderId: order.id, label: order.queueLabel, status }]);
+    }
+    refresh();
+    setBusyId(null);
+  }
+
   async function run(order: VendorOrder, fn: () => Promise<{ ok: boolean }>, done?: string) {
     setBusyId(order.id);
     try {
@@ -141,20 +208,14 @@ export function VendorBoard({
     setBusyId(null);
   }
 
-  // Pre-orders that are not released yet wait at the bottom of รอทำ.
+  // รอทำ is sorted by effective start time: release_at for pre-orders, else queued_at
+  // (PLAN-V2.md Phase 14). Not-yet-released pre-orders show a "เริ่ม 11:57" badge.
   const scheduledIds = new Set(
     board.orders
       .filter((o) => o.status === 'queued' && isScheduled(o.releaseAt, new Date(serverNow)))
       .map((o) => o.id),
   );
-  const orders = [...board.orders].sort((a, b) => {
-    const sa = scheduledIds.has(a.id);
-    const sb = scheduledIds.has(b.id);
-    if (sa !== sb) return sa ? 1 : -1;
-    return sa
-      ? Date.parse(a.releaseAt ?? '') - Date.parse(b.releaseAt ?? '')
-      : a.queueNo - b.queueNo;
-  });
+  const orders = sortByStart(board.orders);
   const repeats = new Map<string, { qty: number; labels: string[] }>();
   for (const o of orders.filter((x) => x.status === 'queued' && !scheduledIds.has(x.id))) {
     for (const it of o.items) {
@@ -203,6 +264,12 @@ export function VendorBoard({
         </p>
       )}
       <div className="flex flex-wrap items-center gap-3">
+        <Link
+          href="/vendor/summary"
+          className={cx(btnSecondary, 'min-h-12')}
+        >
+          สรุปยอดขาย
+        </Link>
         <p className="mr-auto text-sm text-muted">
           รอทำ {board.itemsInQueue} จาน · ทำเสร็จเฉลี่ย {waitMinutes(board.secondsPerItem)} นาที/จาน
           ({board.waitMode === 'auto' ? 'ระบบคำนวณจากปุ่มที่กด' : 'ตั้งเอง'})
@@ -231,7 +298,15 @@ export function VendorBoard({
           {board.isOpen ? 'ปิดรับชั่วคราว' : 'เปิดรับออเดอร์'}
         </button>
       </div>
-      {offline && <OfflineBanner />}
+      {offline && <OfflineBanner fetchedAt={fetchedAt} />}
+      {taps.length > 0 && (
+        <p
+          role="status"
+          className="mx-4 mt-3 rounded-xl bg-warning-soft px-4 py-2.5 text-sm font-semibold text-warning"
+        >
+          รอส่ง {taps.length} รายการ · จะส่งให้อัตโนมัติเมื่อสัญญาณกลับมา
+        </p>
+      )}
 
       {!board.isOpen && (
         <p className="mt-3 rounded-xl bg-danger-soft px-4 py-3 font-semibold text-danger">
@@ -280,15 +355,15 @@ export function VendorBoard({
                         ? Math.max(0, Math.round((serverNow - Date.parse(o.readyAt)) / 60000))
                         : null
                     }
-                    onStart={() => run(o, () => actSetOrderStatus(shopId, o.id, 'cooking'))}
-                    onReady={() =>
-                      run(
-                        o,
-                        () => actSetOrderStatus(shopId, o.id, 'ready'),
-                        `แจ้ง ${o.queueLabel} แล้ว`,
-                      )
+                    pending={
+                      taps
+                        .filter((t) => t.orderId === o.id)
+                        .map((t) => PENDING_TEXT[t.status])
+                        .join(' → ') || null
                     }
-                    onPickedUp={() => run(o, () => actSetOrderStatus(shopId, o.id, 'picked_up'))}
+                    onStart={() => tap(o, 'cooking')}
+                    onReady={() => tap(o, 'ready', `แจ้ง ${o.queueLabel} แล้ว`)}
+                    onPickedUp={() => tap(o, 'picked_up')}
                     onRecall={() =>
                       run(o, () => actRecallOrder(shopId, o.id), `เรียกซ้ำ ${o.queueLabel} แล้ว`)
                     }

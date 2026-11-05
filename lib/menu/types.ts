@@ -67,6 +67,10 @@ export interface Shop {
   allowAllergyNote: boolean;
   waitMode: 'auto' | 'manual';
   manualSecondsPerItem: number;
+  /** App orders above this many dishes must order at the counter (PLAN-V2.md D1). */
+  maxDishesPerOrder?: number;
+  /** Pre-order dishes one pickup slot can hold (PLAN-V2.md D2). */
+  preorderDishesPerSlot?: number;
   ingredients: Ingredient[];
   menus: Menu[];
 }

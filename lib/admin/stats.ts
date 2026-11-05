@@ -2,6 +2,8 @@
 // abandoned, how long vendors take to tap, how accurate the wait estimate was, and what
 // customers said. Pure functions over order rows, so the numbers are easy to check.
 
+import { withinWaitRange } from '../queue';
+
 export interface StatRow {
   shop_id: string;
   source: 'app' | 'walk_in_quick' | 'walk_in_full' | 'simulated';
@@ -53,6 +55,8 @@ export interface ShopStats {
   actualWait: Summary;
   /** actual − estimate, seconds: positive means the app promised too little. */
   estimateError: Summary;
+  /** Orders whose actual wait landed inside the range shown (PLAN-V2.md D4). */
+  inRange: { hit: number; total: number };
   feedback: { faster: number; accurate: number; slower: number; total: number };
   /** Orders that reached ready (the base for the delay numbers). */
   served: number;
@@ -102,6 +106,14 @@ function forRows(shopId: string, name: string, rows: StatRow[]): ShopStats {
       : [];
   });
 
+  const inRange = { hit: 0, total: 0 };
+  app.forEach((r, i) => {
+    const a = actual[i];
+    if (a === null || a < 0 || r.estimated_wait_seconds === null) return;
+    inRange.total++;
+    if (withinWaitRange(a, r.estimated_wait_seconds)) inRange.hit++;
+  });
+
   const fb = { faster: 0, accurate: 0, slower: 0, total: 0 };
   for (const r of app) {
     if (r.feedback) {
@@ -127,6 +139,7 @@ function forRows(shopId: string, name: string, rows: StatRow[]): ShopStats {
     autoClosed: rows.filter((r) => r.picked_up_by === 'auto').length,
     actualWait: summarize(actualWait),
     estimateError: summarize(errors),
+    inRange,
     feedback: fb,
     served: rows.filter((r) => r.ready_at).length,
   };

@@ -5,6 +5,8 @@ import { confirmDemoPayment, demoPaymentsEnabled } from '../payments';
 import { createAdminClient } from '../supabase/admin';
 import { createClient } from '../supabase/server';
 import { createAppOrder, type PlaceOrderResult } from './place';
+import { loadShopBySlug } from '../menu/db';
+import { pickRandomMenu } from '../menu/pick';
 import { reorderFrom } from './reorder';
 import type { WaitFeedback } from './types';
 
@@ -88,4 +90,32 @@ export async function submitFeedback(orderId: string, feedback: string): Promise
 export async function actReorder(orderId: string) {
   const session = await requireCustomer();
   return reorderFrom(session.userId, orderId);
+}
+
+/** 1–5 stars for the shop of a picked-up order; the SQL function checks ownership. */
+export async function submitRating(
+  orderId: string,
+  rating: number,
+  comment: string,
+): Promise<{ ok: boolean }> {
+  await requireCustomer();
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return { ok: false };
+  if (typeof comment !== 'string' || comment.length > 200) return { ok: false };
+  const { error } = await (
+    await createClient()
+  ).rpc('submit_rating', { p_order_id: orderId, p_rating: rating, p_comment: comment });
+  return { ok: !error };
+}
+
+/** "สุ่มเมนู": a random orderable menu at an open shop, as a link target. */
+export async function actRandomMenu(): Promise<{ href: string } | null> {
+  await requireCustomer();
+  const db = createAdminClient();
+  const { data } = await db.from('shops').select('slug').eq('is_open', true);
+  const loaded = await Promise.all((data ?? []).map((s) => loadShopBySlug(db, s.slug)));
+  const pick = pickRandomMenu(
+    loaded.flatMap((l) => (l ? [l.shop] : [])),
+    Math.random,
+  );
+  return pick ? { href: `/s/${pick.slug}?menu=${encodeURIComponent(pick.menuId)}` } : null;
 }

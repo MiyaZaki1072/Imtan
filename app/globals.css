@@ -36,3 +36,50 @@ body {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+
+/*
+ * Dark theme (PLAN-V2.md Phase 16), customer screens only: app/layout.tsx sets
+ * data-theme="dark" before paint from the saved choice. Filled colours (primary, success,
+ * danger buttons with white text) keep their light values so white text stays ≥ 4.5:1;
+ * the matching text colours are lightened instead, so they stay ≥ 4.5:1 on dark surfaces.
+ */
+[data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #171513;
+  --color-surface: #221f1c;
+  --color-border: #3d3833;
+  --color-ink: #f5f1ec;
+  --color-muted: #b9b0a7;
+  --color-primary-soft: #3b2416;
+  --color-success-soft: #12301d;
+  --color-warning-soft: #352710;
+  --color-danger-soft: #3a1717;
+  --color-info-soft: #1d2633;
+  --color-info-ink: #c3d5ea;
+}
+
+[data-theme='dark'] .text-primary {
+  color: #fb923c;
+}
+[data-theme='dark'] .text-primary-hover {
+  color: #fdba74;
+}
+[data-theme='dark'] .text-success {
+  color: #4ade80;
+}
+[data-theme='dark'] .text-warning {
+  color: #fbbf24;
+}
+[data-theme='dark'] .text-danger {
+  color: #f87171;
+}
+/* Text that sits on a filled colour keeps its contrast against that fill. */
+[data-theme='dark'] .bg-primary .text-primary,
+[data-theme='dark'] .bg-white.text-primary,
+[data-theme='dark'] .bg-white .text-primary {
+  color: var(--color-primary);
+}
+[data-theme='dark'] .bg-success.text-success,
+[data-theme='dark'] .bg-white.text-success {
+  color: var(--color-success);
+}
